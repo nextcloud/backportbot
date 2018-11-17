@@ -61,7 +61,7 @@ module.exports = app => {
     const commits = await getCommits(context)
     app.log(commits)
 
-    git.init(app.log, context, token.data.token, commits, 'stable14')
+    const branch = await git(app.log, context, token.data.token, commits, 'stable14')
     
   })
 }
