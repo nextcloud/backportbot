@@ -52,7 +52,9 @@ module.exports = app => {
 
     app.log(targets)
     const origPRnr = context.issue().number
+    const origPRtitle = context.payload.pull_request.title
     app.log(origPRnr)
+    app.log(origPRtitle)
 
     const token = await getToken(installationId)
     const commits = await getCommits(context);
@@ -61,7 +63,8 @@ module.exports = app => {
     app.log(commits)
 
     for (const target of targets) {
-      await backport(app.log, context, origPRnr, target, token, commits)
+      const branch = await backport(app.log, context, origPRnr, target, token, commits)
+      const done = await pr.newReady(app.log, context, origPRnr, origPRtitle, target, branch)
     }
     
     // TODO: Clear label
