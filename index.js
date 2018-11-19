@@ -1,8 +1,6 @@
 const pr = require('./lib/pr.js')
 const comment = require('./lib/comment.js')
 const backport = require('./lib/backport.js')
-const getCommits = require('./lib/commits.js')
-const getToken = require('./lib/token.js')
 
 module.exports = app => {
   app.on('issue_comment.created', async context => {
@@ -20,21 +18,22 @@ module.exports = app => {
       return;
     }
 
-    await comment.plusOne(payload.comment.id)
+    comment.plusOne(context, payload.comment.id)
+    pr.addLabel(context)
 
-    // TODO: set label
-    
     if (!(await pr.isMerged(context, payload.issue.number))) {
       app.log("PR is not yet merged just carry on")
       return
     }
 
+    const success = await backport(context, context.issue.number, [target])
+
+    if (success) {
+      pr.removeLabel(context)
+    }
   })
 
   app.on('pull_request.closed', async context => {
-    const payload = context.payload
-    const installationId = context.payload.installation.id
-
     const params = context.issue()
     const comments  = await context.github.issues.getComments(params)
 
@@ -44,29 +43,24 @@ module.exports = app => {
       const target = comment.match(body)
       if (target !== false) {
         targets.push(target)
-        await comment.plusOne(context, id)
 
-        // TODO: Set label
+        comment.plusOne(context, id)
+        pr.addLabel(context)
       }
     }
 
-    app.log(targets)
-    const origPRnr = context.issue().number
-    const origPRtitle = context.payload.pull_request.title
-    app.log(origPRnr)
-    app.log(origPRtitle)
-
-    const token = await getToken(installationId)
-    const commits = await getCommits(context);
-
-    app.log(token)
-    app.log(commits)
-
-    for (const target of targets) {
-      const branch = await backport(app.log, context, origPRnr, target, token, commits)
-      const done = await pr.newReady(app.log, context, origPRnr, origPRtitle, target, branch)
+    if (targets.length === 0) {
+      app.log('Nothing to backport')
+      return
     }
+
+    //TODO filter same backport requests
+
+    app.log(targets)
+    const success = await backport(context, context.issue.number, targets)
     
-    // TODO: Clear label
+    if (success) {
+      pr.removeLabel(context)
+    }
   })
 }
