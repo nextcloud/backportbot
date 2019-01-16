@@ -35,7 +35,7 @@ module.exports = app => {
 
   app.on('pull_request.closed', async context => {
     const params = context.issue()
-    const comments  = await context.github.issues.getComments(params)
+    const comments  = await context.github.issues.listComments(params)
 
     // Obtain all targets
     let targets = []
