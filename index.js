@@ -54,6 +54,12 @@ module.exports = app => {
       return
     }
 
+    const thisPR = await context.github.pullRequests.get(params)
+    if (!thisPR.data.merged) {
+      app.log('PR is not merged, but closed')
+      return
+    }
+
     //TODO filter same backport requests
 
     app.log(targets)
