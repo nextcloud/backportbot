@@ -19,7 +19,7 @@ module.exports = app => {
     }
 
     comment.plusOne(context, payload.comment.id)
-    pr.addLabel(context)
+    pr.addLabels(context, ['backport-request'], context.issue().number)
 
     if (!(await pr.isMerged(context, payload.issue.number))) {
       app.log("PR is not yet merged just carry on")
@@ -29,7 +29,7 @@ module.exports = app => {
     const success = await backport(context, context.issue.number, [target])
 
     if (success) {
-      pr.removeLabel(context)
+      pr.removeBackportRequestLabel(context)
     }
   })
 
@@ -45,7 +45,7 @@ module.exports = app => {
         targets.push(target)
 
         comment.plusOne(context, id)
-        pr.addLabel(context)
+        pr.addLabels(context, ['backport-request'], params.number)
       }
     }
 
@@ -66,7 +66,7 @@ module.exports = app => {
     const success = await backport(context, context.issue.number, targets)
     
     if (success) {
-      pr.removeLabel(context)
+      pr.removeBackportRequestLabel(context)
     }
   })
 }
