@@ -35,6 +35,13 @@ module.exports = app => {
 
   app.on('pull_request.closed', async context => {
     const params = context.issue()
+
+    const thisPR = await context.github.pullRequests.get(params)
+    if (!thisPR.data.merged) {
+      app.log('PR is not merged, but closed')
+      return
+    }
+
     const comments  = await context.github.issues.listComments(params)
 
     // Obtain all targets
@@ -51,12 +58,7 @@ module.exports = app => {
 
     if (targets.length === 0) {
       app.log('Nothing to backport')
-      return
-    }
-
-    const thisPR = await context.github.pullRequests.get(params)
-    if (!thisPR.data.merged) {
-      app.log('PR is not merged, but closed')
+      pr.askForBackports(thisPR.data.number)
       return
     }
 
@@ -64,7 +66,7 @@ module.exports = app => {
 
     app.log(targets)
     const success = await backport(context, context.issue.number, targets)
-    
+
     if (success) {
       pr.removeBackportRequestLabel(context)
     }
