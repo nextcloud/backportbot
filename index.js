@@ -60,7 +60,7 @@ module.exports = app => {
       return
     }
 
-    //TODO filter same backport requests
+    // TODO: filter same backport requests
 
     app.log(targets)
     const success = await backport(context, context.issue.number, targets)
