@@ -9,7 +9,7 @@ module.exports = app => {
   // Register the backport comment command
   commands(app, 'backport', async (context, command) => {
     const payload = context.payload
-    const issueId = payload.issue.number
+    const issueId = pr.getNumber(context)
 
     // PR checks
     if (!payload.issue.html_url.endsWith('pull/' + issueId)) {
@@ -51,6 +51,8 @@ module.exports = app => {
 
     if (success) {
       pr.removeBackportRequestLabel(context)
+    } else {
+      comment.confused(context, payload.comment.id)
     }
   })
 
@@ -70,32 +72,28 @@ module.exports = app => {
     // Pr have been closed but not merged
     if (!(await pr.isMerged(context, issueId))) {
       logger.info('PR is not merged, but closed', issueId)
-      comment.minusOne(context, payload.comment.id)
       return
     }
 
-    // Obtain all targets
-    let targets = []
+    // Obtain all targets and only keep the
+    // last one to avoid duplicates
+    let targets = {}
     for (const { body, commentId } of comments.data) {
       const target = comment.match(body)
       if (target !== false) {
-        targets.push(target)
+        targets[target.branch] = target
 
         comment.plusOne(context, commentId)
         pr.addLabels(context, ['backport-request'], issueId)
       }
     }
 
-    if (targets.length === 0) {
+    if (Object.values(targets).length === 0) {
       logger.info('Nothing to backport in pr', issueId)
-      comment.confused(context, payload.comment.id)
       return
     }
 
-    // TODO: filter same backport requests
-
-    app.debug(targets)
-    const success = await backport(context, targets, logger)
+    const success = await backport(context, Object.values(targets), logger)
 
     if (success) {
       pr.removeBackportRequestLabel(context)
