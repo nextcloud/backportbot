@@ -78,12 +78,12 @@ module.exports = app => {
     // Obtain all targets and only keep the
     // last one to avoid duplicates
     let targets = {}
-    for (const { body, commentId } of comments.data) {
+    for (const { body, id } of comments.data) {
       const target = comment.match(body)
       if (target !== false) {
         targets[target.branch] = target
 
-        comment.plusOne(context, commentId)
+        comment.plusOne(context, id)
         pr.addLabels(context, ['backport-request'], issueId)
       }
     }
