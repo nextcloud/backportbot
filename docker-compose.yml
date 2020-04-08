@@ -1,0 +1,21 @@
+version: '2'
+services:
+  bot:
+    build: ./
+    restart: always
+    ports:
+      # you might want to use a reverse proxy anything to ssl encrypt the connexion
+      - 3000:3000
+    environment:
+      # your github app id
+      - APP_ID=12345
+      # a random secret string. you can use `openssl rand -base64 32` to generate one
+      # must match your github app config
+      - WEBHOOK_SECRET=1c9ac0159c94d8d0cbedc973445af2da
+      # info, debug, trace...
+      - LOG_LEVEL=info
+      - PRIVATE_KEY_PATH=/app/private-key.pem
+    volumes:
+      # replace the private-key.pem file content with your github app private key
+      # KEEP IT SECRET
+      - ./private-key.pem:/app/private-key.pem:ro

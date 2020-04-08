@@ -1,8 +1,9 @@
-FROM node:11
+FROM nextcloudci/node:node-7
+
+RUN apk add python
 
 WORKDIR /app
-COPY package* /app/
+COPY . .
 RUN npm install --production
-COPY . /app/
-EXPOSE 8080
-ENTRYPOINT [ "npx",  "probot", "run", "./index.js" ]
+
+ENTRYPOINT ["npm", "run", "start"]

@@ -1,70 +1,102 @@
+const commands = require('probot-commands')
 const pr = require('./lib/pr.js')
 const comment = require('./lib/comment.js')
 const backport = require('./lib/backport.js')
 
 module.exports = app => {
-  app.on('issue_comment.created', async context => {
+  const logger = app.log
+
+  // Register the backport comment command
+  commands(app, 'backport', async (context, command) => {
     const payload = context.payload
+    const issueId = payload.issue.number
 
-    if (!payload.issue.html_url.endsWith('pull/' + payload.issue.number)) {
+    // PR checks
+    if (!payload.issue.html_url.endsWith('pull/' + issueId)) {
       // Ignore normal issues
-      app.log("NOT A PR!")
+      logger.info('This is not a PR', command)
+      comment.minusOne(context, payload.comment.id)
       return
     }
 
-    const target = comment.match(payload.comment.body);
+    // match the comment
+    const target = comment.match(command.arguments)
     if (target === false) {
-      app.log('Ignore')
-      return;
-    }
-
-    comment.plusOne(context, payload.comment.id)
-    pr.addLabels(context, ['backport-request'], context.issue().number)
-
-    if (!(await pr.isMerged(context, payload.issue.number))) {
-      app.log("PR is not yet merged just carry on")
+      logger.info('Invalid target', command)
+      comment.minusOne(context, payload.comment.id)
       return
     }
 
-    const success = await backport(context, context.issue.number, [target])
+    if (!(await pr.isMerged(context, issueId))) {
+      // Pr have been closed but not merged
+      if (await pr.isClosed(context, issueId)) {
+        logger.info('PR is not merged, but closed', issueId)
+        comment.minusOne(context, payload.comment.id)
+        return
+      }
+
+      // Pr still opened but not merged, let's wait for closure
+      logger.info('PR is not yet merged just carry on')
+      comment.eyes(context, payload.comment.id)
+
+      pr.addLabels(context, ['backport-request'], issueId)
+      return
+    }
+
+    // Pr is merged AND closed, let's backport !
+    comment.plusOne(context, payload.comment.id)
+    pr.addLabels(context, ['backport-request'], issueId)
+
+    const success = await backport(context, [target], logger)
 
     if (success) {
       pr.removeBackportRequestLabel(context)
     }
   })
 
+  // On pr close
   app.on('pull_request.closed', async context => {
+    const payload = context.payload
+    const issueId = payload.pull_request && payload.pull_request.number
+
+    if (!issueId) {
+      logger.error('Invalid pull request', payload.pull_request)
+      return
+    }
+
     const params = context.issue()
-    const comments  = await context.github.issues.listComments(params)
+    const comments = await context.github.issues.listComments(params)
+
+    // Pr have been closed but not merged
+    if (!(await pr.isMerged(context, issueId))) {
+      logger.info('PR is not merged, but closed', issueId)
+      comment.minusOne(context, payload.comment.id)
+      return
+    }
 
     // Obtain all targets
     let targets = []
-    for (const {body, id} of comments.data) {
+    for (const { body, commentId } of comments.data) {
       const target = comment.match(body)
       if (target !== false) {
         targets.push(target)
 
-        comment.plusOne(context, id)
-        pr.addLabels(context, ['backport-request'], params.number)
+        comment.plusOne(context, commentId)
+        pr.addLabels(context, ['backport-request'], issueId)
       }
     }
 
     if (targets.length === 0) {
-      app.log('Nothing to backport')
-      return
-    }
-
-    const thisPR = await context.github.pullRequests.get(params)
-    if (!thisPR.data.merged) {
-      app.log('PR is not merged, but closed')
+      logger.info('Nothing to backport in pr', issueId)
+      comment.confused(context, payload.comment.id)
       return
     }
 
     // TODO: filter same backport requests
 
-    app.log(targets)
-    const success = await backport(context, context.issue.number, targets)
-    
+    app.debug(targets)
+    const success = await backport(context, targets, logger)
+
     if (success) {
       pr.removeBackportRequestLabel(context)
     }
