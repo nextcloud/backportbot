@@ -19,7 +19,7 @@
 	},
 	"dependencies": {
 		"acorn": "^7.1.1",
-		"fs-extra": "^9.0.0",
+		"fs-extra": "^10.0.0",
 		"github-app": "^4.0.1",
 		"probot": "^9.11.2",
 		"probot-commands": "^1.1.0",
