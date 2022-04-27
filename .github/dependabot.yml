@@ -3,33 +3,8 @@ updates:
 - package-ecosystem: npm
   directory: "/"
   schedule:
-    interval: daily
-    time: "04:00"
+    interval: weekly
+    day: saturday
+    time: "03:00"
+    timezone: Europe/Paris
   open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: probot
-    versions:
-    - 11.0.5
-    - 11.0.6
-    - 11.1.0
-    - 11.1.1
-    - 11.2.1
-    - 11.2.2
-    - 11.2.3
-  - dependency-name: acorn
-    versions:
-    - 8.0.5
-    - 8.1.0
-    - 8.1.1
-  - dependency-name: simple-git
-    versions:
-    - 2.31.0
-    - 2.32.0
-    - 2.34.2
-    - 2.35.0
-    - 2.35.1
-    - 2.35.2
-    - 2.36.0
-    - 2.36.1
-    - 2.36.2
-    - 2.37.0
