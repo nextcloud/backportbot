@@ -18,7 +18,7 @@
 		"lint": "standard --fix"
 	},
 	"dependencies": {
-		"acorn": "^7.1.1",
+		"acorn": "^8.7.1",
 		"fs-extra": "^9.0.0",
 		"github-app": "^4.0.1",
 		"probot": "^9.11.2",
