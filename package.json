@@ -1,36 +1,36 @@
 {
-	"name": "backport",
-	"version": "1.1.0",
-	"description": "A probot app that tries to do automatic backports",
-	"author": "Roeland Jago Douma <roeland@famdouma.nl> (https://rullzer.com)",
-	"license": "ISC",
-	"repository": "https://github.com//backport.git",
-	"homepage": "https://github.com//backport",
-	"bugs": "https://github.com//backport/issues",
-	"keywords": [
-		"probot",
-		"github",
-		"probot-app"
-	],
-	"scripts": {
-		"dev": "nodemon",
-		"start": "probot run ./index.js",
-		"lint": "standard --fix"
-	},
-	"dependencies": {
-		"acorn": "^7.1.1",
-		"fs-extra": "^9.0.0",
-		"github-app": "^4.0.1",
-		"probot": "^9.11.2",
-		"probot-commands": "^1.1.0",
-		"simple-git": "^1.132.0"
-	},
-	"devDependencies": {
-		"smee-client": "^1.2.2",
-		"standard": "^12.0.1"
-	},
-	"engines": {
-		"node": "^14.0.0",
-		"npm": "^7.0.0"
-	}
+  "name": "backport",
+  "version": "1.1.0",
+  "description": "A probot app that tries to do automatic backports",
+  "author": "Roeland Jago Douma <roeland@famdouma.nl> (https://rullzer.com)",
+  "license": "ISC",
+  "repository": "https://github.com//backport.git",
+  "homepage": "https://github.com//backport",
+  "bugs": "https://github.com//backport/issues",
+  "keywords": [
+    "probot",
+    "github",
+    "probot-app"
+  ],
+  "scripts": {
+    "dev": "nodemon",
+    "start": "probot run ./index.js",
+    "lint": "standard --fix"
+  },
+  "dependencies": {
+    "acorn": "^7.1.1",
+    "fs-extra": "^9.0.0",
+    "github-app": "^4.0.1",
+    "probot": "^9.11.2",
+    "probot-commands": "^1.1.0",
+    "simple-git": "^1.132.0"
+  },
+  "devDependencies": {
+    "smee-client": "^1.2.2",
+    "standard": "^12.0.1"
+  },
+  "engines": {
+    "node": "^16.0.0",
+    "npm": "^7.0.0 || ^8.0.0"
+  }
 }
