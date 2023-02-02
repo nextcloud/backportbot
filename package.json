@@ -26,7 +26,7 @@
     "simple-git": "^1.132.0"
   },
   "devDependencies": {
-    "smee-client": "^1.2.2",
+    "smee-client": "^1.2.3",
     "standard": "^12.0.1"
   },
   "engines": {
