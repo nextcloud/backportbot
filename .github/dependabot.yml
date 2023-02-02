@@ -8,3 +8,13 @@ updates:
     time: "03:00"
     timezone: Europe/Paris
   open-pull-requests-limit: 10
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+      timezone: Europe/Paris
+    open-pull-requests-limit: 10
+    labels:
+      - 3. to review
+      - dependencies
