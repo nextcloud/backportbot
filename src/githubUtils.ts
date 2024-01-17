@@ -26,7 +26,10 @@ export const getCommitsForPR = async (octokit: Octokit, owner: string, repo: str
 		repo,
 		pull_number: pr,
 	})
-	return commits.map(commit => commit.sha)
+	return commits
+		// Filter out merge commits
+		.filter(commit => (commit.parents || []).length <= 1)
+		.map(commit => commit.sha)
 }
 
 export const addReaction = async (octokit: Octokit, task: Task, reaction: Reaction): Promise<void> => {
