@@ -156,13 +156,16 @@ export const hasSkipCiCommits = async (repoRoot: string, commits: number): Promi
 	return commitMessages.some(message => message.includes('[skip ci]'))
 }
 
+export const hasDiff = async (repoRoot: string, base: string, head: string): Promise<boolean> => {
+	const git = simpleGit(repoRoot)
+	const diff = await git.raw(['diff', '--stats', base, head])
+	return diff !== ''
+}
 
 export const hasEmptyCommits = async (repoRoot: string, commits: number): Promise<boolean> => {
-	const git = simpleGit(repoRoot)
 	let hasEmptyCommits = false
 	for (let count = 0; count < commits; count++) {
-		const diff = await git.raw(['diff', '--stat', `HEAD~${count}`, `HEAD~${count + 1}`])
-		if (diff === '') {
+		if (!await hasDiff(repoRoot, `HEAD~${count}`, `HEAD~${count + 1}`)) {
 			hasEmptyCommits = true
 			break
 		}

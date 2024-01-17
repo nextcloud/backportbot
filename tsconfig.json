@@ -1,6 +1,6 @@
 {
 	"extends": "@tsconfig/recommended",
-	"include": ["src/**/*"],
+	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules"],
 	"compilerOptions": {
 		"allowJs": true

@@ -5,10 +5,10 @@
 	"version": "1.0.0",
 	"configurations": [
 		{
-		"name": "TS-Node",
+		"name": "TSX Debug",
 		"type": "node",
 		"request": "launch",
-		"runtimeExecutable": "${workspaceRoot}/node_modules/.bin/ts-node",
+		"runtimeExecutable": "${workspaceRoot}/node_modules/.bin/tsx",
 		"program": "src/index.ts",
 		"cwd": "${workspaceRoot}",
 		"internalConsoleOptions": "openOnSessionStart",

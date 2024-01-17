@@ -1,21 +1,20 @@
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 
 export const SERVE_PORT = 8123
 export const SERVE_HOST = '0.0.0.0'
-
-
-export const APP_ID = process.env.APP_ID
-export const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
-export const PRIVATE_KEY_FILENAME = 'private-key.pem'
 
 export const ROOT_DIR = resolve(__dirname + '/../')
 export const CACHE_DIRNAME = 'cache' // relative to the root dir
 export const WORK_DIRNAME = 'work' // relative to the root dir
 
-export const LOG_FILE = 'backport.log'
-export const QUEUE_FILE = 'queue.json'
+export const APP_ID = process.env.APP_ID || 0
+export const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || ''
+export const PRIVATE_KEY_FILENAME = 'private-key.pem'
+export const PRIVATE_KEY_PATH = process.env.PRIVATE_KEY_PATH || join(ROOT_DIR, PRIVATE_KEY_FILENAME)
 
-export const COMMAND_PREFIX = '/skjnldsv-backport'
+export const LOG_FILE = 'backport.log'
+
+export const COMMAND_PREFIX = '/backport'
 export const TO_SEPARATOR = ' to '
 export const COMMIT_REGEX = /^\b[0-9a-f]{7,40}$\b/i
 export const BRANCH_REGEX = /^\b[a-z0-9-_./]{1,100}\b$/i

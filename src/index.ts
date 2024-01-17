@@ -4,7 +4,7 @@ import { info, error } from 'node:console'
 import { Octokit } from '@octokit/rest'
 
 import { addToQueue } from './queue'
-import { CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task } from './constants'
+import { CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET } from './constants'
 import { extractBranchFromPayload, extractCommitsFromPayload } from './payloadUtils'
 import { getApp } from './appUtils'
 import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel, setPRLabels } from './githubUtils'
@@ -227,14 +227,17 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 			// If the PR is already merged, we can start the backport right away
 			if (isMerged) {
-				addToQueue(task).then(async () => {
+				try {
+					await addToQueue(task)
 					// Remove the backport label from the PR on success
 					try {
 						await removePRLabel(authOctokit, task, prNumber, LABEL_BACKPORT)
 					} catch (e) {
 						error(`\nFailed to remove backport label from PR ${htmlUrl}: ${e.message}`)
 					}
-				})
+				} catch (e) {
+					// Safely ignore
+				}
 			}
 		} catch (e) {
 			// This should really not happen, but if it does, we want to know about it
@@ -256,11 +259,14 @@ Subscribed events: ${data.events}`)
 		process.exit(1)
 	}
 
+	const obfuscatedWebhookSecret = WEBHOOK_SECRET.slice(0, 8) + '*'.repeat(WEBHOOK_SECRET.length - 8)
 	info(`Listening on ${SERVE_HOST}:${SERVE_PORT}`)
 	info(`├ Authenticated as ${data.name}`)
 	info(`├ Monitoring events`, data.events)
 	info(`├ Command prefix: ${COMMAND_PREFIX}`)
 	info(`├ Root dir: ${ROOT_DIR}`)
-	info(`└ Cache dir: ${ROOT_DIR}/${CACHE_DIRNAME}`)
+	info(`├ Cache dir: ${ROOT_DIR}/${CACHE_DIRNAME}`)
+	info(`├ Private key in ${PRIVATE_KEY_PATH}`)
+	info(`└ Webhook secret is ${obfuscatedWebhookSecret}`)
 	createServer(createNodeMiddleware(app.webhooks)).listen(SERVE_PORT, SERVE_HOST)
 })
