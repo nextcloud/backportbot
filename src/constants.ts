@@ -1,6 +1,6 @@
 import { join, resolve } from 'node:path'
 
-export const SERVE_PORT = 8123
+export const SERVE_PORT = 3000
 export const SERVE_HOST = '0.0.0.0'
 
 export const ROOT_DIR = resolve(__dirname + '/../')
