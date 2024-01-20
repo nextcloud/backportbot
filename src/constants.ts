@@ -1,7 +1,7 @@
 import { join, resolve } from 'node:path'
 
-export const SERVE_PORT = 3000
-export const SERVE_HOST = '0.0.0.0'
+export const SERVE_PORT = process.env.SERVE_PORT || 3000
+export const SERVE_HOST = process.env.SERVE_HOST || '0.0.0.0'
 
 export const ROOT_DIR = resolve(__dirname + '/../')
 export const CACHE_DIRNAME = 'cache' // relative to the root dir

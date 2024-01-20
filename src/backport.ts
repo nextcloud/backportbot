@@ -43,16 +43,17 @@ export const backport = (task: Task) => new Promise<void>((resolve, reject) => {
 			}
 
 			// Check if there are any changes to backport
-			if (!await hasDiff(tmpDir, task.branch, backportBranch)) {
+			const hasChanges = await hasDiff(tmpDir, task.branch, backportBranch, task)
+			if (!hasChanges) {
 				throw new Error(`No changes found in backport branch`)
 			}
 
 			// Push the branch
 			try {
-				await pushBranch(task, tmpDir, token)
+				await pushBranch(task, tmpDir, token, backportBranch)
 				info(task, `Pushed branch ${backportBranch}`)
 			} catch (e) {
-				throw new Error(`Failed to push branch: ${e.message}`)
+				throw new Error(`Failed to push branch ${backportBranch}: ${e.message}`)
 			}
 
 			// Create the pull request
@@ -119,7 +120,7 @@ export const backport = (task: Task) => new Promise<void>((resolve, reject) => {
 					|| oldChanges.deletions !== newChanges.deletions
 					|| oldChanges.changedFiles !== newChanges.changedFiles
 				const skipCi = await hasSkipCiCommits(tmpDir, task.commits.length)
-				const emptyCommits = await hasEmptyCommits(tmpDir, task.commits.length)
+				const emptyCommits = await hasEmptyCommits(tmpDir, task.commits.length, task)
 				const hasConflicts = conflicts === CherryPickResult.CONFLICTS
 
 				debug(task, `hasConflicts: ${hasConflicts}, diffChanges: ${diffChanges}, emptyCommits: ${emptyCommits}, skipCi: ${skipCi}`)

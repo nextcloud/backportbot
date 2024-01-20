@@ -7,9 +7,15 @@ import { addToQueue } from './queue'
 import { CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET } from './constants'
 import { extractBranchFromPayload, extractCommitsFromPayload } from './payloadUtils'
 import { getApp } from './appUtils'
-import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel, setPRLabels } from './githubUtils'
+import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel } from './githubUtils'
+import { setGlobalGitConfig } from './gitUtils'
 
 const app = getApp()
+
+app.webhooks.onError(err => {
+	error(`Error occurred in ${err.event.name}: ${err.message}`)
+})
+
 app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 	const installationId = payload?.installation?.id as number
 	const owner = payload.repository.owner.login
@@ -114,7 +120,7 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 	})
 
 	info(`├ Total backport requests: ${comments.length}`)
-	info(`└ Handled backport requests: ${processedBranches.size}\n`)
+	info(`└ Handled backport requests: ${processedBranches.size}`)
 })
 
 app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
@@ -204,7 +210,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 			info(`├ Repo: ${owner}/${repo}`)
 			info(`├ Author: ${author}`)
-			info(`└ Commits: ${commits.join(' ')}\n`)
+			info(`└ Commits: ${commits.join(' ')}`)
 
 			const task = {
 				owner,
@@ -251,13 +257,15 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 	}
 })
 
-app.octokit.request('/app').then(({data}) => {
+app.octokit.request('/app').then(async ({data}) => {
 	if (!data.events.includes('pull_request') || !data.events.includes('issue_comment')) {
 		error(`The app is not subscribed to the required events.
 You need to subscribe to \`pull_request\` AND \`issue_comment\` events.
 Subscribed events: ${data.events}`)
 		process.exit(1)
 	}
+
+	await setGlobalGitConfig(data.name)
 
 	const obfuscatedWebhookSecret = WEBHOOK_SECRET.slice(0, 8) + '*'.repeat(WEBHOOK_SECRET.length - 8)
 	info(`Listening on ${SERVE_HOST}:${SERVE_PORT}`)

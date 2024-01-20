@@ -5,6 +5,14 @@ import { simpleGit } from 'simple-git'
 import { CACHE_DIRNAME, CherryPickResult, ROOT_DIR, Task, WORK_DIRNAME } from './constants'
 import { debug, error } from './logUtils'
 
+export const setGlobalGitConfig = async (user: string): Promise<void> => {
+	const git = simpleGit()
+	await git.addConfig('user.email', `${user}[bot]@users.noreply.github.com`, false, 'global')
+	await git.addConfig('user.name', `${user}[bot]`, false, 'global')
+	await git.addConfig('commit.gpgsign', 'false', false, 'global')
+	await git.addConfig('format.signoff', 'true', false, 'global')
+}
+
 /**
  * Clones the repo into the cache dir and then copies it to the work dir.
  * @param owner The owner of the repo.
@@ -88,9 +96,10 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 			debug(task, `Cherry picked commit ${commit.slice(0, 8)}`)
 			lastValidCommit = commit
 			continue
-		} catch (error) {
+		} catch (e) {
 			conflicts = true
 			await git.raw(['cherry-pick', '--abort'])
+			error(task, `Could not cherry pick commit ${commit.slice(0, 8)}: ${e.message}`)
 		}
 
 		// Cherry picking commit while discarding conflicts
@@ -107,7 +116,7 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 		} catch (e) {
 			// This can fail if the commit is empty because all of its
 			// files are conflicting. In that case, we can just skip it.
-			error(task, `Could not cherry pick commit ${commit.slice(0, 8)} with ours strategy`)
+			error(task, `Could not cherry pick commit ${commit.slice(0, 8)} with ours strategy: ${e.message}`)
 			await git.raw(['cherry-pick', '--abort'])
 		}
 	}
@@ -139,10 +148,10 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 	return conflicts ? CherryPickResult.CONFLICTS : CherryPickResult.OK
 }
 
-export const pushBranch = async (task: Task, repoRoot: string, token: string): Promise<void> => {
+export const pushBranch = async (task: Task, repoRoot: string, token: string, backportBranch: string): Promise<void> => {
 	const git = simpleGit(repoRoot)
 	git.remote(['set-url', 'origin', `https://x-access-token:${token}@github.com/${task.owner}/${task.repo}.git`])
-	await git.raw(['push', 'origin', '--force'])
+	await git.raw(['push', 'origin', '--force', backportBranch])
 }
 
 export const hasSkipCiCommits = async (repoRoot: string, commits: number): Promise<boolean> => {
@@ -156,16 +165,17 @@ export const hasSkipCiCommits = async (repoRoot: string, commits: number): Promi
 	return commitMessages.some(message => message.includes('[skip ci]'))
 }
 
-export const hasDiff = async (repoRoot: string, base: string, head: string): Promise<boolean> => {
+export const hasDiff = async (repoRoot: string, base: string, head: string, task: Task): Promise<boolean> => {
 	const git = simpleGit(repoRoot)
-	const diff = await git.raw(['diff', '--stats', base, head])
+	const diff = await git.raw(['diff', '--stat', base, head])
+	debug(task, `Diff between ${base} and ${head}: ${diff}`)
 	return diff !== ''
 }
 
-export const hasEmptyCommits = async (repoRoot: string, commits: number): Promise<boolean> => {
+export const hasEmptyCommits = async (repoRoot: string, commits: number, task: Task): Promise<boolean> => {
 	let hasEmptyCommits = false
 	for (let count = 0; count < commits; count++) {
-		if (!await hasDiff(repoRoot, `HEAD~${count}`, `HEAD~${count + 1}`)) {
+		if (!await hasDiff(repoRoot, `HEAD~${count}`, `HEAD~${count + 1}`, task)) {
 			hasEmptyCommits = true
 			break
 		}
