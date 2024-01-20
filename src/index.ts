@@ -4,7 +4,7 @@ import { info, error } from 'node:console'
 import { Octokit } from '@octokit/rest'
 
 import { addToQueue } from './queue'
-import { CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET } from './constants'
+import { ALLOWED_ORGS, CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET, WORK_DIRNAME } from './constants'
 import { extractBranchFromPayload, extractCommitsFromPayload } from './payloadUtils'
 import { getApp } from './appUtils'
 import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel } from './githubUtils'
@@ -22,7 +22,7 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 	const repo = payload.repository.name
 	const htmlUrl = payload.pull_request.html_url
 
-	if (owner !== 'nextcloud' && owner !== 'skjnldsv') {
+	if (ALLOWED_ORGS.includes(owner) === false) {
 		info(`Ignoring ${htmlUrl} from ${owner}`)
 		return
 	}
@@ -120,7 +120,7 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 	})
 
 	info(`├ Total backport requests: ${comments.length}`)
-	info(`└ Handled backport requests: ${processedBranches.size}`)
+	info(`└ Handled backport requests: ${processedBranches.size}\n`)
 })
 
 app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
@@ -129,7 +129,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 	const repo = payload.repository.name
 	const htmlUrl = payload.issue.html_url
 
-	if (owner !== 'nextcloud' && owner !== 'skjnldsv') {
+	if (ALLOWED_ORGS.includes(owner) === false) {
 		info(`Ignoring ${htmlUrl} from ${owner}`)
 		return
 	}
@@ -210,7 +210,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 			info(`├ Repo: ${owner}/${repo}`)
 			info(`├ Author: ${author}`)
-			info(`└ Commits: ${commits.join(' ')}`)
+			info(`└ Commits: ${commits.join(' ')}\n`)
 
 			const task = {
 				owner,
@@ -265,15 +265,20 @@ Subscribed events: ${data.events}`)
 		process.exit(1)
 	}
 
+	// Set the global git config
 	await setGlobalGitConfig(data.name)
 
 	const obfuscatedWebhookSecret = WEBHOOK_SECRET.slice(0, 8) + '*'.repeat(WEBHOOK_SECRET.length - 8)
 	info(`Listening on ${SERVE_HOST}:${SERVE_PORT}`)
 	info(`├ Authenticated as ${data.name}`)
-	info(`├ Monitoring events`, data.events)
+	info(`├ Monitoring events ${data.events.join(', ')}`)
 	info(`├ Command prefix: ${COMMAND_PREFIX}`)
-	info(`├ Root dir: ${ROOT_DIR}`)
-	info(`├ Cache dir: ${ROOT_DIR}/${CACHE_DIRNAME}`)
+	info(`├──────────────────────────────`)
+	info(`├ Root directory: ${ROOT_DIR}`)
+	info(`├ Cache directory: ${ROOT_DIR}/${CACHE_DIRNAME}`)
+	info(`├ Work directory: ${ROOT_DIR}/${WORK_DIRNAME}`)
+	info(`├──────────────────────────────`)
+	info(`├ Allowed orgs: ${ALLOWED_ORGS.join(', ')}`)
 	info(`├ Private key in ${PRIVATE_KEY_PATH}`)
 	info(`└ Webhook secret is ${obfuscatedWebhookSecret}`)
 	createServer(createNodeMiddleware(app.webhooks)).listen(SERVE_PORT, SERVE_HOST)
