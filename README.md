@@ -1,41 +1,37 @@
-# backport
+# Backportbot
 
-> A GitHub App built with [Probot](https://github.com/probot/probot) that A probot app that tries to do automatic backports
-
-## Setup
-
-```sh
-# Install dependencies
-npm install
-
-# Run the bot
-npm start
-```
+The Backportbot is a GitHub bot designed to streamline the process of backporting pull requests or specific commits to older branches in the Nextcloud repository.
+This bot aims to make it easier for contributors to maintain and support multiple versions of the software by automating the backporting process.
 
 ## Usage
 
-The backport bot listens for comments to pull requests (PRs) on Github Nextcloud projects. To request a backport of a PR to a particular branch (`stable24` in this example), simply comment on the PR with the following syntax. A single comment is needed for each target branch.
+The Backportbot responds to specific commands in GitHub comments. Here are the allowed commands:
 
-```
-/backport to stable24
-```
+- `/backport to <branch>`: Backport all of the pull request's commits to the specified branch.
+- `/backport <commit1> to <branch>`: Backport the specified commit to the specified branch.
+- `/backport <commit1> <commit2> to <branch>`: Backport multiple commits to the specified branch.
+- `/backport! to <branch>`: Trigger the backport request instantly without waiting for the pull request to be merged.
 
-Additionally you can also only backport a single or some commits of a pull request. This can be done by specifying the commit hashes:
+### Examples:
 
-```
-# Single commit
-/backport 12345678 to stable24
+1. `/backport to stable28`: Backport all of the PR's commits to the stable28 branch.
+2. `/backport abc456def to stable28`: Backport the commit with hash abc456def to the stable28 branch.
+3. `/backport abc456def 123ghi789 to stable28`: Backport both commit abc456def and 123ghi789 to the stable28 branch.
+4. `/backport! to stable28`: Trigger the backport request instantly without waiting for PR to be merged.
 
-# Multiple commits
-/backport 12345678,abcdef12,fedcba21 to stable24
-```
+## How it Works
 
-## Contributing
+The Backportbot monitors GitHub comments for the specified commands. When triggered and approved, it will wait for the PR to be merged and automatically create backport requests to the specified branches. In case of duplicates branches in the commands, the most recent one will always be used and the other dropped.
 
-If you have suggestions for how backport could be improved, or want to report a bug, open an issue! We'd love all and any contributions.
+### Reactions and their meanings
 
-For more, check out the [Contributing Guide](CONTRIBUTING.md).
+- 👀 The command is valid and the bot is waiting for the PR to be merged
+- 😕 The command is not valid
+- 👍 The bot started processing that comment/request
+- 👎 The bot failed to execute tha backport. A comment with steps and additional informations on the failure will also be added.
 
-## License
+## Contribution
 
-[ISC](LICENSE) © 2018 Roeland Jago Douma <roeland@famdouma.nl> (https://rullzer.com)
+Feel free to contribute to the development of the Backportbot. If you encounter issues or have ideas for improvement, please open an issue or submit a pull request.
+
+Let's make maintaining Nextcloud across different branches more efficient with the help of the Backportbot!
