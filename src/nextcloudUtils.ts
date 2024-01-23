@@ -25,12 +25,12 @@ const compareSemanticVersions = (a: string, b: string) => {
 
 export const getMilestoneFromBase = (branch: string, milestones: Milestone[]): Milestone => {
 	// Extract the version from the branch name, e.g. stable21
-	const version = branch.match(/stable(\d{2})/i)?.[1]
+	const version = branch.match(/^\D+([\d.]+)/i)?.[1]
 	if (!version) {
-		throw new Error(`Could not extract version from branch ${branch}`)
+		throw new Error(`Could not extract version from branch \`${branch}\``)
 	}
 	const selection = milestones
-		.filter(milestone => milestone.title.startsWith('Nextcloud ' + version))
+		.filter(milestone => milestone.title.includes(version))
 		.sort((a, b) => compareSemanticVersions(a.title, b.title))
 	return selection[0]
 }
