@@ -161,7 +161,8 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 		let branch: string
 		let commits: string[] = []
 
-		const isFullRequest = body.trim().startsWith(COMMAND_PREFIX + TO_SEPARATOR)
+		const isForcedRequest = body.trim().startsWith(COMMAND_PREFIX + '!')
+		const isFullRequest = body.trim().startsWith(isForcedRequest ? COMMAND_PREFIX + '!' + TO_SEPARATOR : COMMAND_PREFIX + TO_SEPARATOR)
 		const isClosed = payload.issue?.state === 'closed'
 		const isMerged = typeof payload.issue?.pull_request?.merged_at === 'string'
 
@@ -203,6 +204,8 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 			// PR info
 			if (isMerged) {
 				info(`├ PR is merged, starting backport right away`)
+			} else if (isForcedRequest) {
+				info(`├ PR is not merged, but force flag is present, starting backport right away`)
 			} else {
 				info(`├ PR is not merged yet, waiting for merge`)
 				addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.EYES)
@@ -232,7 +235,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 			}
 
 			// If the PR is already merged, we can start the backport right away
-			if (isMerged) {
+			if (isMerged || isForcedRequest) {
 				try {
 					await addToQueue(task)
 					// Remove the backport label from the PR on success
