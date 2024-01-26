@@ -216,6 +216,8 @@ export const getBackportRequestsFromPR = async (octokit: Octokit, task: Task): P
 	return data
 		// Filter out invalid comments
 		.filter(comment => comment?.body?.trim().startsWith(COMMAND_PREFIX))
+		// Filter out forced requests
+		.filter(comment => !comment?.body?.trim().startsWith(COMMAND_PREFIX + '!'))
 		// Filter out comments from non-collaborators
 		.filter(comment => comment?.author_association !== 'NONE')
 		// Filter out comments that got rejected by the bot.
