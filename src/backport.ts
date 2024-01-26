@@ -142,8 +142,8 @@ export const backport = (task: Task) => new Promise<void>((resolve, reject) => {
 			addReaction(octokit, task, Reaction.HOORAY)
 		} catch (e) {
 			// Add a thumbs down reaction to the comment to indicate that we failed
-			addReaction(octokit, task, Reaction.THUMBS_DOWN)
 			try {
+				addReaction(octokit, task, Reaction.THUMBS_DOWN)
 				const failureComment = getFailureCommentBody(task, backportBranch, e?.message)
 				await commentOnPR(octokit, task, failureComment)
 			} catch (e) {
