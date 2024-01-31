@@ -74,7 +74,7 @@ export const backport = (task: Task) => new Promise<void>((resolve, reject) => {
 					await requestReviewers(octokit, task, prNumber, [task.author])
 					info(task, `Requested reviews from ${[...reviewers, task.author].join(', ')}`)
 				} catch (e) {
-					throw new Error(`Failed to request reviews: ${e.message}`)
+					error(task, `Failed to request reviews: ${e.message}`)
 				}
 			} catch (e) {
 				throw new Error(`Failed to create pull request: ${e.message}`)
