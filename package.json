@@ -35,7 +35,7 @@
     "p-queue": "^8.0.1",
     "simple-git": "^3.22.0",
     "ts-node": "^10.9.2",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.1"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.3",
