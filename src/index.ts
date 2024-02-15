@@ -218,7 +218,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 			info(`├ Repo: ${owner}/${repo}`)
 			info(`├ Author: ${author}`)
-			info(`└ Commits: ${commits.join(' ')}\n`)
+			info(`└ Commits: ${commits.map(commit => commit.slice(0, 8)).join(' ')}\n`)
 
 			const task = {
 				owner,
@@ -294,5 +294,17 @@ Subscribed events: ${data.events}`)
 	info(`├ Allowed orgs: ${ALLOWED_ORGS.join(', ')}`)
 	info(`├ Private key in ${PRIVATE_KEY_PATH}`)
 	info(`└ Webhook secret is ${obfuscatedWebhookSecret}`)
-	createServer(createNodeMiddleware(app.webhooks)).listen(SERVE_PORT, SERVE_HOST)
+
+	// Create server
+	const middleware = createNodeMiddleware(app.webhooks)
+	createServer(async (req, res) => {
+		// `middleware` returns `false` when `req` is unhandled (beyond `/api/github`)
+		if (await middleware(req, res)) return;
+
+		// Add health check
+		if (req.url === '/health') {
+			res.writeHead(200, { 'Content-Type': 'text/plain' })
+			res.end('OK')
+		} 
+	}).listen(SERVE_PORT, SERVE_HOST)
 })
