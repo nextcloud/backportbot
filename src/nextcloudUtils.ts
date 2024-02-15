@@ -107,7 +107,7 @@ git checkout -b ${target}
 
 # Cherry pick the change from the commit sha1 of the change against the default branch
 # This might cause conflicts, resolve them
-git cherry-pick ${commits.join(' ')}
+git cherry-pick ${commits.map(commit => commit.slice(0, 8)).join(' ')}
 
 # Push the cherry pick commit to the remote repository and open a pull request
 git push origin ${target}
