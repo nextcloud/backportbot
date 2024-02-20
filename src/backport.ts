@@ -67,7 +67,6 @@ export const backport = (task: Task) => new Promise<void>((resolve, reject) => {
 				const prCreationResult = await createBackportPullRequest(octokit, task, backportBranch, conflicts === CherryPickResult.CONFLICTS)
 				prNumber = prCreationResult.data.number
 				info(task, `Opened Pull Request #${prNumber} on ${prCreationResult.data.html_url}`)
-				addReaction(octokit, task, Reaction.THUMBS_UP)
 
 				try {
 					// Ask for reviews from all reviewers of the original PR
