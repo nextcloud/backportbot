@@ -20,7 +20,7 @@ export const backport = (task: Task) => new Promise<void>((resolve, reject) => {
 
 		// Add a reaction to the comment to indicate that we're processing it
 		try {
-			addReaction(octokit, task, Reaction.THUMBS_UP)
+			await addReaction(octokit, task, Reaction.THUMBS_UP)
 		} catch (e) {
 			error(task, `Failed to add reaction to PR: ${e.message}`)
 			// continue, this is not a fatal error
