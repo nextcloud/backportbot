@@ -31,7 +31,7 @@ export const LABEL_TO_REVIEW = '3. to review'
 
 export const STEP_REVIEW_CONFLICTS = 'Review and resolve any conflicts'
 export const STEP_REMOVE_EMPTY_COMMITS = 'Remove all the empty commits'
-export const STEP_AMEND_SKIP_CI = 'Amend HEAD commit to remove `[skip ci]` tag'
+export const STEP_AMEND_SKIP_CI = 'Amend HEAD commit to remove the line stating to skip CI'
 
 export const WARN_CONFLICTS = 'This backport had conflicts that were resolved with the `ours` merge strategy and is likely incomplete ⚠️'
 export const WARN_DIFF = 'This backport\'s changes differ from the original and might be incomplete ⚠️'
