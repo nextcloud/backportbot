@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/skjnldsv/backportbot#readme",
   "dependencies": {
-    "@octokit/app": "^14.1.0",
+    "@octokit/app": "^15.1.0",
     "@octokit/rest": "^20.1.1",
     "@octokit/webhooks": "^13.2.7",
     "p-queue": "^8.0.1",
