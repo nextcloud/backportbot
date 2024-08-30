@@ -1,4 +1,9 @@
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
 
 // Runtime variables
 export const SERVE_PORT = process.env.SERVE_PORT || 3000

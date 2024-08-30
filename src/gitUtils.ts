@@ -70,6 +70,10 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 		await git.raw(['fetch', '--all'])
 		await git.raw(['pull', '--prune'])
 
+		// reset and clean the repo
+		await git.raw(['reset', '--hard', `origin/${branch}`])
+		await git.raw(['clean', '--force', '-dfx'])
+
 		// Checkout the branch we want to backport from
 		await git.checkout(branch)
 		await git.checkoutBranch(
