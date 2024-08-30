@@ -3,12 +3,9 @@
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules"],
 	"compilerOptions": {
-		"allowJs": true
-	},
-	"ts-node": {
-		// It is faster to skip typechecking.
-		// Remove if you want ts-node to do typechecking.
-		"transpileOnly": true,
-		"files": true,
+		"allowJs": true,
+		"moduleResolution": "node16",
+		"module": "node16",
+		"target": "es2022"
 	},
 }
