@@ -1,9 +1,10 @@
-import { cpSync, existsSync, mkdirSync} from 'node:fs'
+import { existsSync, mkdirSync} from 'node:fs'
 import { join } from 'node:path'
 import { simpleGit } from 'simple-git'
 
-import { CACHE_DIRNAME, CherryPickResult, ROOT_DIR, Task, WORK_DIRNAME } from './constants'
-import { debug, error } from './logUtils'
+import { CACHE_DIRNAME, CherryPickResult, ROOT_DIR, Task, WORK_DIRNAME } from './constants.js'
+import { debug, error } from './logUtils.js'
+import { randomBytes } from 'node:crypto'
 
 export const setGlobalGitConfig = async (user: string): Promise<void> => {
 	const git = simpleGit()
@@ -27,11 +28,18 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 	// Clone the repo into the cache dir or make sure it already exists
 	const cachedRepoRoot = join(ROOT_DIR, CACHE_DIRNAME, owner, repo)
 	try {
-		if (!existsSync(cachedRepoRoot + '/.git')) {
+		// Create repo path if needed
+		if (!existsSync(cachedRepoRoot)) {
 			mkdirSync(cachedRepoRoot, { recursive: true })
-			const git = simpleGit(cachedRepoRoot)
+		}
+
+		const git = simpleGit(cachedRepoRoot)
+		if (!existsSync(cachedRepoRoot + '/.git')) {
+			// Is not a repository, so clone
 			await git.clone(`https://github.com/${owner}/${repo}`, '.')
 		} else {
+			// Is already a repository so make sure it is clean and follows the default branch
+			await git.clean(['-X', '-d', '-f'])
 			debug(task, `Repo already cached at ${cachedRepoRoot}`)
 		}
 	} catch (e) {
@@ -52,36 +60,19 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 	// }
 
 	// Init a new temp repo in the work dir
-	const tmpDirName = Math.random().toString(36).substring(7)
+	const tmpDirName = randomBytes(7).toString('hex')
 	const tmpRepoRoot = join(ROOT_DIR, WORK_DIRNAME, tmpDirName)
 	try {
 		// Copy the cached repo to the temp repo
 		mkdirSync(join(ROOT_DIR, WORK_DIRNAME), { recursive: true })
-		cpSync(cachedRepoRoot, tmpRepoRoot, { recursive: true })
+		// create worktree
+		const git = simpleGit(cachedRepoRoot)
+		// fetch upstream version of the branch - well we need to fetch all because we do not know where the commits are located we need to cherry-pick
+		await git.fetch(['-p', '--all'])
+		// create work tree with up-to-date content of that branch
+		await git.raw(['worktree', 'add', '-b', backportBranch, tmpRepoRoot, `origin/${branch}`])
 	} catch (e) {
-		throw new Error(`Failed to copy cached repo: ${e.message}`)
-	}
-
-	try {
-		// Checkout all the branches
-		const git = simpleGit(tmpRepoRoot)
-		// TODO: We could do that to the cached repo, but
-		// this seem to create some concurrency issues.
-		await git.raw(['fetch', '--all'])
-		await git.raw(['pull', '--prune'])
-
-		// reset and clean the repo
-		await git.raw(['reset', '--hard', `origin/${branch}`])
-		await git.raw(['clean', '--force', '-dfx'])
-
-		// Checkout the branch we want to backport from
-		await git.checkout(branch)
-		await git.checkoutBranch(
-			backportBranch,
-			branch
-		)
-	} catch (e) {
-		throw new Error(`Failed to checkout branches: ${e.message}`)
+		throw new Error(`Failed to create working tree: ${e.message}`)
 	}
 
 	return tmpRepoRoot

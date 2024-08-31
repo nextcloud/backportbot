@@ -3,16 +3,16 @@ import { createServer } from 'http'
 import { info, error, warn } from 'node:console'
 import { Octokit } from '@octokit/rest'
 
-import { addToQueue } from './queue'
-import { ALLOWED_ORGS, CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET, WORK_DIRNAME } from './constants'
-import { extractBranchFromPayload, extractCommitsFromPayload } from './payloadUtils'
-import { getApp } from './appUtils'
-import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel } from './githubUtils'
-import { setGlobalGitConfig } from './gitUtils'
+import { addToQueue } from './queue.js'
+import { ALLOWED_ORGS, CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET, WORK_DIRNAME } from './constants.js'
+import { extractBranchFromPayload, extractCommitsFromPayload } from './payloadUtils.js'
+import { getApp } from './appUtils.js'
+import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel } from './githubUtils.js'
+import { setGlobalGitConfig } from './gitUtils.js'
 
 const app = getApp()
 
-app.webhooks.onError(err => {
+app.webhooks.onError((err) => {
 	error(`Error occurred in ${err.event.name}: ${err.message}`)
 })
 
