@@ -65,14 +65,22 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 	try {
 		// Checkout all the branches
 		const git = simpleGit(tmpRepoRoot)
+
+		// Clean the repo
+		await git.raw(['clean', '--force', '-dfx'])
+		debug(task, `Cleaned repo at ${tmpRepoRoot}`)
+
 		// TODO: We could do that to the cached repo, but
 		// this seem to create some concurrency issues.
 		await git.raw(['fetch', '--all'])
+		debug(task, `Fetched all branches`)
+
 		await git.raw(['pull', '--prune'])
+		debug(task, `Pulled and pruned branches`)
 
 		// reset and clean the repo
 		await git.raw(['reset', '--hard', `origin/${branch}`])
-		await git.raw(['clean', '--force', '-dfx'])
+		debug(task, `Reset to origin/${branch}`)
 
 		// Checkout the branch we want to backport from
 		await git.checkout(branch)
