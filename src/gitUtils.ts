@@ -75,9 +75,6 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 		await git.raw(['fetch', '--all'])
 		debug(task, `Fetched all branches`)
 
-		await git.raw(['pull', '--prune'])
-		debug(task, `Pulled and pruned branches`)
-
 		// reset and clean the repo
 		await git.raw(['reset', '--hard', `origin/${branch}`])
 		debug(task, `Reset to origin/${branch}`)
