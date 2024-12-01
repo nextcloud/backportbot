@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync} from 'node:fs'
 import { join } from 'node:path'
-import { simpleGit } from 'simple-git'
+import { CleanOptions, simpleGit } from 'simple-git'
 
 import { CACHE_DIRNAME, CherryPickResult, ROOT_DIR, Task, WORK_DIRNAME } from './constants.js'
 import { debug, error } from './logUtils.js'
@@ -39,7 +39,7 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 			await git.clone(`https://github.com/${owner}/${repo}`, '.')
 		} else {
 			// Is already a repository so make sure it is clean and follows the default branch
-			await git.clean(['-X', '-d', '-f'])
+			await git.clean(CleanOptions.FORCE + CleanOptions.IGNORED_ONLY + CleanOptions.RECURSIVE)
 			debug(task, `Repo already cached at ${cachedRepoRoot}`)
 		}
 	} catch (e) {
