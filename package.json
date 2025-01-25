@@ -33,7 +33,7 @@
     "@octokit/app": "^14.1.0",
     "@octokit/rest": "^21.1.0",
     "@octokit/webhooks": "^13.4.1",
-    "p-queue": "^8.0.1",
+    "p-queue": "^8.1.0",
     "simple-git": "^3.27.0",
     "tsx": "^4.19.2"
   },
