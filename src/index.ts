@@ -136,6 +136,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 	const commentId = payload?.comment?.id as number
 	const body = payload?.comment?.body || ''
+	const actor = payload?.comment?.user?.login || ''
 
 	const author = payload.issue?.user?.login || ''
 	const prNumber = payload.issue?.number
@@ -218,6 +219,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 			info(`├ Repo: ${owner}/${repo}`)
 			info(`├ Author: ${author}`)
+			info(`├ Actor: ${actor}`)
 			info(`└ Commits: ${commits.map(commit => commit.slice(0, 8)).join(' ')}\n`)
 
 			const task = {
