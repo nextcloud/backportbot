@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { CleanOptions, simpleGit } from 'simple-git'
 
 import { CACHE_DIRNAME, CherryPickResult, ROOT_DIR, Task, WORK_DIRNAME } from './constants.js'
-import { debug, error } from './logUtils.js'
+import { debug, error, info } from './logUtils.js'
 import { randomBytes } from 'node:crypto'
 
 export const setGlobalGitConfig = async (user: string): Promise<void> => {
@@ -69,6 +69,14 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 		const git = simpleGit(cachedRepoRoot)
 		// fetch upstream version of the branch - well we need to fetch all because we do not know where the commits are located we need to cherry-pick
 		await git.fetch(['-p', '--all'])
+		// make sure the branch doesn't already exist
+		try {
+			await git.raw(['branch', '-D', backportBranch])
+			await git.raw(['worktree', 'prune']);
+			info(task, `Removed existing worktree for branch ${backportBranch}`)
+		} catch (e) {
+			error(task, `Failed to remove existing worktree for branch ${backportBranch}: ${e.message}`)
+		}
 		// create work tree with up-to-date content of that branch
 		await git.raw(['worktree', 'add', '-b', backportBranch, tmpRepoRoot, `origin/${branch}`])
 	} catch (e) {
