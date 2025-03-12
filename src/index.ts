@@ -5,7 +5,7 @@ import { Octokit } from '@octokit/rest'
 
 import { addToQueue } from './queue.js'
 import { ALLOWED_ORGS, CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET, WORK_DIRNAME } from './constants.js'
-import { extractBranchFromPayload, extractCommitsFromPayload } from './payloadUtils.js'
+import { extractBranchFromPayload, extractCommitsFromPayload, isFriendly } from './payloadUtils.js'
 import { getApp } from './appUtils.js'
 import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel } from './githubUtils.js'
 import { setGlobalGitConfig } from './gitUtils.js'
@@ -187,6 +187,13 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.CONFUSED)
 			error(`Failed to extract commits and branch from payload: \`${body}\` on ${htmlUrl}`)
 			return
+		}
+		try {
+			if (isFriendly(body)) {
+				addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.HEART)
+			}
+		} catch (e) {
+			warn(`Could not process friendliness: ` + e.message)
 		}
 
 		// Start processing the request
