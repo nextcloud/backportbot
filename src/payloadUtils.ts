@@ -31,3 +31,7 @@ export const extractBranchFromPayload = (payload: string): string => {
 	}
 	return branch
 }
+
+export const isFriendly = (payload: string): boolean => {
+	return payload.endsWith('please')
+}
