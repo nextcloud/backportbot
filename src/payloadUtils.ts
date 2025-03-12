@@ -23,7 +23,12 @@ export const extractCommitsFromPayload = (payload: string): string[] => {
 
 export const extractBranchFromPayload = (payload: string): string => {
 	const firstLine = payload.split('\n')[0]
-	const branch = firstLine.split(TO_SEPARATOR)[1]?.trim?.() ?? ''
+
+	// Split the first line by the TO_SEPARATOR
+	let branch = firstLine.split(TO_SEPARATOR)[1]?.trim?.() ?? ''
+	
+	// Ignore polite requests
+	branch = branch.replace('please', '').trim()
 
 	// Check if the branch matches the regex
 	if (!BRANCH_REGEX.test(branch)) {

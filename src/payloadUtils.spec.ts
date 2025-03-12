@@ -9,6 +9,8 @@ describe('Extracts valid commits from payload', () => {
 		'/backport! 123456789 123456789 to stable28',
 		'/backport 0182735b7bb0ee7904f0622943afe689cdaf50d5 to stable28',
 		'/backport! 0182735b7bb0ee7904f0622943afe689cdaf50d5 to stable28',
+		'/backport to stable28 please',
+		'/backport 0182735b7bb0ee7904f0622943afe689cdaf50d5 to stable28',
 	]
 
 	const expectedCommits = [
@@ -17,6 +19,8 @@ describe('Extracts valid commits from payload', () => {
 		['123456789', '123456789'],
 		['123456789', '123456789'],
 		['0182735b7bb0ee7904f0622943afe689cdaf50d5'],
+		['0182735b7bb0ee7904f0622943afe689cdaf50d5'],
+		[],
 		['0182735b7bb0ee7904f0622943afe689cdaf50d5'],
 	]
 
@@ -51,12 +55,16 @@ describe('Extracts valid branch from payload', () => {
 		'/backport 123456789 to stable28',
 		'/backport 123456789 to fix/123456/fix-something',
 		'/backport 123456789 to fix-123456-fix-something',
+		'/backport to stable28 please',
+		'/backport 123456789 to stable28 please',
 	]
 
 	const expectedBranches = [
 		'stable28',
 		'fix/123456/fix-something',
 		'fix-123456-fix-something',
+		'stable28',
+		'stable28',
 	]
 
 	payloads.forEach((payload, index) => {
