@@ -47,11 +47,16 @@ export async function backport(task: Task): Promise<void> {
 			throw new Error(`Failed to cherry pick commits: ${e.message}`)
 		}
 
-		// Check if there are any changes to backport
-		const hasChanges = await hasDiff(tmpDir, task.branch, backportBranch, task)
-		if (!hasChanges) {
-			throw new Error(`No changes found in backport branch`)
+		try {
+			// Check if there are any changes to backport
+			const hasChanges = await hasDiff(tmpDir, `origin/${task.branch}`, backportBranch, task)
+			if (!hasChanges) {
+				throw new Error(`No changes found in backport branch`)
+			}
+		} catch (e) {
+			throw new Error(`Failed to check for changes with origin/${task.branch}: ${e.message}`)
 		}
+
 
 		// Push the branch
 		try {
@@ -150,21 +155,23 @@ export async function backport(task: Task): Promise<void> {
 			addReaction(octokit, task, Reaction.THUMBS_DOWN)
 			const failureComment = getFailureCommentBody(task, backportBranch, e?.message)
 			await commentOnPR(octokit, task, failureComment)
+			error(task, `Something went wrong during the backport process: ${e?.message}`)
+			console.trace()
 		} catch (e) {
 			error(task, `Failed to comment failure on PR: ${e.message}`)
 			// continue, this is not a fatal error
 		}
 
 		throw new Error(`Failed to backport: ${e.message}`)
-	}
-
-	// Remove the temp dir if it exists
-	if (tmpDir !== '' && existsSync(tmpDir)) {
-		try {
-			rmSync(tmpDir, { recursive: true })
-			info(task, `Removed ${tmpDir}`)
-		} catch (e) {
-			throw new Error(`Failed to remove ${tmpDir}: ${e.message}`)
+	} finally {
+		// Remove the temp dir if it exists
+		if (tmpDir !== '' && existsSync(tmpDir)) {
+			try {
+				rmSync(tmpDir, { recursive: true })
+				info(task, `Removed ${tmpDir}`)
+			} catch (e) {
+				error(task, `Failed to remove ${tmpDir}: ${e.message}`)
+			}
 		}
 	}
 }
