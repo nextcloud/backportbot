@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs'
 import { Octokit } from '@octokit/rest'
 
-import { cherryPickCommits, cloneAndCacheRepo, hasDiff, hasEmptyCommits, hasSkipCiCommits, pushBranch } from './gitUtils.js'
+import { cherryPickCommits, cloneAndCacheRepo, getCommitTitle, hasDiff, hasEmptyCommits, hasSkipCiCommits, pushBranch } from './gitUtils.js'
 import { CherryPickResult, Task } from './constants.js'
 import { debug, error, info, warn } from './logUtils.js'
 import { Reaction, addReaction, getAuthToken, getAvailableLabels, getLabelsFromPR, getAvailableMilestones, requestReviewers, getReviewers, createBackportPullRequest, setPRLabels, setPRMilestone, getChangesFromPR, updatePRBody, commentOnPR, assignToPR } from './githubUtils.js'
@@ -57,7 +57,6 @@ export async function backport(task: Task): Promise<void> {
 			throw new Error(`Failed to check for changes with origin/${task.branch}: ${e.message}`)
 		}
 
-
 		// Push the branch
 		try {
 			await pushBranch(task, tmpDir, token, backportBranch)
@@ -65,6 +64,17 @@ export async function backport(task: Task): Promise<void> {
 		} catch (e) {
 			throw new Error(`Failed to push branch ${backportBranch}: ${e.message}`)
 		}
+
+		// If only one commit, we use it as the PR title
+		if (!task.isFullRequest && task.commits.length === 1) {
+			const oldTitle = task.prTitle
+			task.prTitle = await getCommitTitle(tmpDir, task.commits[0]) || task.prTitle
+			if (oldTitle !== task.prTitle) {
+				info(task, `Using commit title as PR title: ${task.prTitle}`)
+			} else {
+				error(task, `Failed to get commit title`)
+			}
+		} 
 
 		// Create the pull request
 		try {
@@ -135,7 +145,7 @@ export async function backport(task: Task): Promise<void> {
 			debug(task, `hasConflicts: ${hasConflicts}, diffChanges: ${diffChanges}, emptyCommits: ${emptyCommits}, skipCi: ${skipCi}`)
 			try {
 				if (hasConflicts || diffChanges || emptyCommits || skipCi) {
-					const newBody = await getBackportBody(task.prNumber, hasConflicts, diffChanges, emptyCommits, skipCi)
+					const newBody = await getBackportBody(task.prNumber, hasConflicts, diffChanges, emptyCommits, skipCi, task.isFullRequest)
 					await updatePRBody(octokit, task, prNumber, newBody)
 				}
 			} catch (e) {

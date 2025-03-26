@@ -55,6 +55,7 @@ export type Task = {
 	prTitle: string
 	commentId: number
 	author: string
+	isFullRequest: boolean
 }
 
 export enum CherryPickResult {

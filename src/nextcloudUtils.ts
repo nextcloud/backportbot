@@ -54,7 +54,7 @@ export const getLabelsForPR = (labels: string[], repoLabels: string[]): string[]
 	return [...new Set(results)] // Remove duplicates
 }
 
-export const getBackportBody = (prNumber: number, hasConflicts: boolean, hasDiff: boolean, hasEmptyCommits: boolean, hasSkipCiCommits: boolean ) => {
+export const getBackportBody = (prNumber: number, hasConflicts: boolean, hasDiff: boolean, hasEmptyCommits: boolean, hasSkipCiCommits: boolean, isFullRequest = false) => {
 	const steps: string[] = []
 	let warning: string = ''
 
@@ -63,7 +63,8 @@ export const getBackportBody = (prNumber: number, hasConflicts: boolean, hasDiff
 		warning = WARN_CONFLICTS
 	}
 	
-	if (hasDiff) {
+	// Check if we have a PR diff only if it's a full request
+	if (hasDiff && isFullRequest) {
 		steps.push(STEP_REVIEW_CONFLICTS)
 		warning = WARN_DIFF
 	}

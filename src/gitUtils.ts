@@ -46,33 +46,27 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 		throw new Error(`Failed to clone and cache repo: ${e.message}`)
 	}
 
-
-	// try {
-	// 	// Fetch all branches and pull them
-	// 	// We never branch away from the default branch on
-	// 	// the cached repo so we can just pull all branches.
-	// 	// There should be no concurrency issues here 🙏
-	// 	const git = simpleGit(cachedRepoRoot)
-	// 	await git.raw(['fetch', '--all'])
-	// 	await git.raw(['pull', '--prune'])
-	// } catch (e) {
-	// 	throw new Error(`Failed to fetch and pull repo: ${e.message}`)
-	// }
-
 	// Init a new temp repo in the work dir
 	const tmpDirName = randomBytes(7).toString('hex')
 	const tmpRepoRoot = join(ROOT_DIR, WORK_DIRNAME, tmpDirName)
 	try {
 		// Copy the cached repo to the temp repo
 		mkdirSync(join(ROOT_DIR, WORK_DIRNAME), { recursive: true })
+
 		// create worktree
 		const git = simpleGit(cachedRepoRoot)
+
+		// make sure we are on the default branch
+		const defaultBranch = (await git.raw(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])).split('origin/').pop() || 'master'
+		await git.raw(['checkout', defaultBranch.slice(0, defaultBranch.indexOf("\n")).trim()])
+
 		// fetch upstream version of the branch - well we need to fetch all because we do not know where the commits are located we need to cherry-pick
 		await git.fetch(['-p', '--all'])
+
 		// make sure the branch doesn't already exist
 		try {
-			await git.raw(['branch', '-D', backportBranch])
 			await git.raw(['worktree', 'prune']);
+			await git.deleteLocalBranches([backportBranch], true)
 			info(task, `Removed existing worktree for branch ${backportBranch}`)
 		} catch (e) {
 			error(task, `Failed to remove existing worktree for branch ${backportBranch}: ${e.message}`)
@@ -184,4 +178,14 @@ export const hasEmptyCommits = async (repoRoot: string, commits: number, task: T
 		}
 	}
 	return hasEmptyCommits
+}
+
+export const getCommitTitle = async (repoRoot: string, commit: string): Promise<string|null> => {
+	const git = simpleGit(repoRoot)
+	const log = await git.log({
+		from: commit,
+		to: `${commit}~1`,
+		multiLine: true,
+	})
+	return log.latest?.message || null
 }

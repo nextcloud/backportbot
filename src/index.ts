@@ -95,6 +95,7 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 				commentId: id,
 				installationId,
 				author,
+				isFullRequest,
 			} as Task
 
 			processedBranches.add(branch)
@@ -239,6 +240,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 				commentId,
 				installationId,
 				author,
+				isFullRequest
 			} as Task
 
 			// Add the backport label to the PR
