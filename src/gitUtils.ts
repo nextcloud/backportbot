@@ -185,3 +185,13 @@ export const hasEmptyCommits = async (repoRoot: string, commits: number, task: T
 	}
 	return hasEmptyCommits
 }
+
+export const getCommitTitle = async (repoRoot: string, commit: string): Promise<string|null> => {
+	const git = simpleGit(repoRoot)
+	const log = await git.log({
+		from: commit,
+		to: `${commit}~1`,
+		multiLine: true,
+	})
+	return log.latest?.message || null
+}
