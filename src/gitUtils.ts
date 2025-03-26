@@ -58,15 +58,15 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 
 		// make sure we are on the default branch
 		const defaultBranch = (await git.raw(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])).split('origin/').pop() || 'master'
-		await git.checkout(defaultBranch)
+		await git.raw(['checkout', defaultBranch.slice(0, defaultBranch.indexOf("\n")).trim()])
 
 		// fetch upstream version of the branch - well we need to fetch all because we do not know where the commits are located we need to cherry-pick
 		await git.fetch(['-p', '--all'])
 
 		// make sure the branch doesn't already exist
 		try {
-			await git.deleteLocalBranches([backportBranch], true)
 			await git.raw(['worktree', 'prune']);
+			await git.deleteLocalBranches([backportBranch], true)
 			info(task, `Removed existing worktree for branch ${backportBranch}`)
 		} catch (e) {
 			error(task, `Failed to remove existing worktree for branch ${backportBranch}: ${e.message}`)
