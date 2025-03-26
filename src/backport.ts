@@ -6,7 +6,6 @@ import { CherryPickResult, Task } from './constants.js'
 import { debug, error, info, warn } from './logUtils.js'
 import { Reaction, addReaction, getAuthToken, getAvailableLabels, getLabelsFromPR, getAvailableMilestones, requestReviewers, getReviewers, createBackportPullRequest, setPRLabels, setPRMilestone, getChangesFromPR, updatePRBody, commentOnPR, assignToPR } from './githubUtils.js'
 import { getBackportBody, getFailureCommentBody, getLabelsForPR, getMilestoneFromBase } from './nextcloudUtils.js'
-import { e } from 'vitest/dist/reporters-1evA5lom.js'
 
 export async function backport(task: Task): Promise<void> {
 	const token = await getAuthToken(task.installationId)
@@ -146,7 +145,7 @@ export async function backport(task: Task): Promise<void> {
 			debug(task, `hasConflicts: ${hasConflicts}, diffChanges: ${diffChanges}, emptyCommits: ${emptyCommits}, skipCi: ${skipCi}`)
 			try {
 				if (hasConflicts || diffChanges || emptyCommits || skipCi) {
-					const newBody = await getBackportBody(task.prNumber, hasConflicts, diffChanges, emptyCommits, skipCi)
+					const newBody = await getBackportBody(task.prNumber, hasConflicts, diffChanges, emptyCommits, skipCi, task.isFullRequest)
 					await updatePRBody(octokit, task, prNumber, newBody)
 				}
 			} catch (e) {
