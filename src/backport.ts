@@ -67,7 +67,7 @@ export async function backport(task: Task): Promise<void> {
 		}
 
 		// If only one commit, we use it as the PR title
-		if (task.isFullRequest && task.commits.length === 1) {
+		if (!task.isFullRequest && task.commits.length === 1) {
 			const oldTitle = task.prTitle
 			task.prTitle = await getCommitTitle(tmpDir, task.commits[0]) || task.prTitle
 			if (oldTitle !== task.prTitle) {
