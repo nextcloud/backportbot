@@ -41,7 +41,7 @@ export const STEP_AMEND_SKIP_CI = 'Amend HEAD commit to remove the line stating 
 export const WARN_CONFLICTS = 'This backport had conflicts that were resolved with the `ours` merge strategy and is likely incomplete ⚠️'
 export const WARN_DIFF = 'This backport\'s changes differ from the original and might be incomplete ⚠️'
 
-export const LEARN_MORE = `\n---\n\nLearn more about backports at https://docs.nextcloud.com/server/stable/go.php?to=developer-backports.`
+export const LEARN_MORE = `\n\n---\n\nLearn more about backports at https://docs.nextcloud.com/server/stable/go.php?to=developer-backports.`
 
 // --------------------------------------------------
 // Various shared types and enums
