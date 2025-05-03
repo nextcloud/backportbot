@@ -35,7 +35,7 @@
     "@octokit/webhooks": "^13.8.2",
     "p-queue": "^8.1.0",
     "simple-git": "^3.27.0",
-    "tsx": "^4.19.3"
+    "tsx": "^4.19.4"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.8",
