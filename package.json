@@ -41,7 +41,7 @@
     "@tsconfig/recommended": "^1.0.8",
     "@types/node": "^20.14.12",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "@vitest/coverage-istanbul": "^2.1.8",
     "eslint": "^8.57.1",
     "typescript": "^5.8.3",
