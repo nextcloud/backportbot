@@ -44,7 +44,7 @@ export const addReaction = async (octokit: Octokit, task: Task, reaction: Reacti
 
 export const getReviewers = async function (octokit: Octokit, task: Task): Promise<string[]> {
 	const { owner, repo, prNumber } = task
-	const reviews = await octokit.pulls.listReviews({
+	const reviews = await octokit.rest.pulls.listReviews({
 		owner,
 		repo,
 		pull_number: prNumber
@@ -64,7 +64,7 @@ export const getReviewers = async function (octokit: Octokit, task: Task): Promi
 
 export const requestReviewers = async function (octokit: Octokit, task: Task, prNumber: number, reviewers: string[]) {
 	const { owner, repo } = task
-	return octokit.pulls.requestReviewers({
+	return octokit.rest.pulls.requestReviewers({
 		owner,
 		repo,
 		pull_number: prNumber,
@@ -131,7 +131,7 @@ export const getLabelsFromPR = async (octokit: Octokit, task: Task): Promise<str
 
 export const setPRLabels = async (octokit: Octokit, task: Task, prNumber: number, labels: string[]) => {
 	const { owner, repo } = task
-	return octokit.issues.update({
+	return octokit.rest.issues.update({
 		owner,
 		repo,
 		issue_number: prNumber,
@@ -141,7 +141,7 @@ export const setPRLabels = async (octokit: Octokit, task: Task, prNumber: number
 
 export const addPRLabel = async (octokit: Octokit, task: Task, prNumber: number, label: string) => {
 	const { owner, repo } = task
-	return octokit.issues.addLabels({
+	return octokit.rest.issues.addLabels({
 		owner,
 		repo,
 		issue_number: prNumber,
@@ -151,7 +151,7 @@ export const addPRLabel = async (octokit: Octokit, task: Task, prNumber: number,
 
 export const removePRLabel = async (octokit: Octokit, task: Task, prNumber: number, label: string) => {
 	const { owner, repo } = task
-	return octokit.issues.removeLabel({
+	return octokit.rest.issues.removeLabel({
 		owner,
 		repo,
 		issue_number: prNumber,
@@ -161,7 +161,7 @@ export const removePRLabel = async (octokit: Octokit, task: Task, prNumber: numb
 
 export const assignToPR = async (octokit: Octokit, task: Task, prNumber: number, assignees: string[]) => {
 	const { owner, repo } = task
-	return octokit.issues.addAssignees({
+	return octokit.rest.issues.addAssignees({
 		owner,
 		repo,
 		issue_number: prNumber,
@@ -171,7 +171,7 @@ export const assignToPR = async (octokit: Octokit, task: Task, prNumber: number,
 
 export const setPRMilestone = async (octokit: Octokit, task: Task, prNumber: number, milestone: Milestone) => {
 	const { owner, repo } = task
-	return octokit.issues.update({
+	return octokit.rest.issues.update({
 		owner,
 		repo,
 		issue_number: prNumber,
