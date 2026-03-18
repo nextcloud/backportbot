@@ -158,15 +158,14 @@ export async function backport(task: Task): Promise<void> {
 		}
 
 		// Success! We're done here
-		addReaction(octokit, task, Reaction.HOORAY)
+		await addReaction(octokit, task, Reaction.HOORAY)
 	} catch (e) {
 		// Add a thumbs down reaction to the comment to indicate that we failed
 		try {
-			addReaction(octokit, task, Reaction.THUMBS_DOWN)
+			await addReaction(octokit, task, Reaction.THUMBS_DOWN)
 			const failureComment = getFailureCommentBody(task, backportBranch, e?.message)
 			await commentOnPR(octokit, task, failureComment)
 			error(task, `Something went wrong during the backport process: ${e?.message}`)
-			console.trace()
 		} catch (e) {
 			error(task, `Failed to comment failure on PR: ${e.message}`)
 			// continue, this is not a fatal error
