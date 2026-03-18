@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { Milestone } from '@octokit/webhooks-types'
-import { getBackportBody, getMilestoneFromBase } from './nextcloudUtils'
-import { LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, WARN_CONFLICTS, WARN_DIFF } from './constants'
+import { getBackportBody, getFailureCommentBody, getLabelsForPR, getMilestoneFromBase } from './nextcloudUtils'
+import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
 
 describe('Match branch branch to milestone', () => {
 	const branches = [
@@ -69,6 +69,32 @@ describe('Throws error for invalid branch', () => {
 	})
 })
 
+describe('Returns labels for a backport PR', () => {
+	test('Returns empty array when no labels and no to-review in repo', () => {
+		expect(getLabelsForPR([], [])).toEqual([])
+	})
+
+	test('Returns labels without backport-request label', () => {
+		expect(getLabelsForPR([LABEL_BACKPORT, 'bug', 'enhancement'], [])).toEqual(['bug', 'enhancement'])
+	})
+
+	test('Filters out kanban labels', () => {
+		expect(getLabelsForPR(['bug', '1. To do', '2. In progress'], [])).toEqual(['bug'])
+	})
+
+	test('Prepends to-review label when present in repo labels', () => {
+		expect(getLabelsForPR(['bug'], [LABEL_TO_REVIEW])).toEqual([LABEL_TO_REVIEW, 'bug'])
+	})
+
+	test('Does not add to-review label when not in repo labels', () => {
+		expect(getLabelsForPR(['bug'], ['other-label'])).toEqual(['bug'])
+	})
+
+	test('Removes duplicate labels', () => {
+		expect(getLabelsForPR([LABEL_TO_REVIEW, 'bug'], [LABEL_TO_REVIEW])).toEqual([LABEL_TO_REVIEW, 'bug'])
+	})
+})
+
 describe('getBackportBody', () => {
 	test('returns simple body with no warnings or steps when nothing is wrong', () => {
 		const body = getBackportBody(42, false, false, false, false)
@@ -125,5 +151,50 @@ describe('getBackportBody', () => {
 		expect(getBackportBody(1, false, false, false, false)).toContain(LEARN_MORE)
 		expect(getBackportBody(1, true, true, true, true, true).endsWith(LEARN_MORE)).toBe(true)
 		expect(getBackportBody(1, false, false, false, false).endsWith(LEARN_MORE)).toBe(true)
+	})
+})
+
+describe('Generates correct failure comment body', () => {
+	const task: Task = {
+		installationId: 1,
+		owner: 'nextcloud',
+		repo: 'server',
+		branch: 'stable28',
+		commits: ['abc1234567890', 'def1234567890'],
+		prNumber: 42,
+		prTitle: 'Fix something',
+		commentId: 99,
+		author: 'testuser',
+		isFullRequest: false,
+	}
+
+	test('Contains the target branch name', () => {
+		const body = getFailureCommentBody(task, 'backport/stable28/pr-42')
+		expect(body).toContain('stable28')
+	})
+
+	test('Contains the cherry-pick commands with short commit hashes', () => {
+		const body = getFailureCommentBody(task, 'backport/stable28/pr-42')
+		expect(body).toContain('git cherry-pick abc12345 def12345')
+	})
+
+	test('Contains default error message when none provided', () => {
+		const body = getFailureCommentBody(task, 'backport/stable28/pr-42')
+		expect(body).toContain('Error: Unknown error')
+	})
+
+	test('Contains provided error message', () => {
+		const body = getFailureCommentBody(task, 'backport/stable28/pr-42', 'Merge conflict in file.ts')
+		expect(body).toContain('Error: Merge conflict in file.ts')
+	})
+
+	test('Contains the backport target branch for checkout', () => {
+		const body = getFailureCommentBody(task, 'backport/stable28/pr-42')
+		expect(body).toContain('git checkout -b backport/stable28/pr-42')
+	})
+
+	test('Contains learn more link', () => {
+		const body = getFailureCommentBody(task, 'backport/stable28/pr-42')
+		expect(body).toContain(LEARN_MORE)
 	})
 })
