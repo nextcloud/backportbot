@@ -35,6 +35,7 @@ export const LABEL_BACKPORT = 'backport-request'
 export const LABEL_TO_REVIEW = '3. to review'
 
 export const STEP_REVIEW_CONFLICTS = 'Review and resolve any conflicts'
+export const STEP_REVIEW_CHANGES = 'Review and verify the backported changes'
 export const STEP_REMOVE_EMPTY_COMMITS = 'Remove all the empty commits'
 export const STEP_AMEND_SKIP_CI = 'Amend HEAD commit to remove the line stating to skip CI'
 

@@ -121,19 +121,21 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 	// If there are conflicts, we need to amend the last commit message
 	// to add a skip-ci tag so that CI doesn't run on the PR.
 	if (conflicts && lastValidCommit !== '') {
-		let originalCommitMessage: string|null = null
 		try {
 			const commitLog = await git.log({
 				from: lastValidCommit,
 				to: `${lastValidCommit}~1`,
 				multiLine: true,
 			})
-			originalCommitMessage = commitLog?.latest?.body || null
+			const subject = commitLog?.latest?.message ?? ''
+			const body = commitLog?.latest?.body ?? ''
+			// Reconstruct full commit message from subject + body, then append [skip ci]
+			const baseMessage = body.trim() ? `${subject}\n\n${body.trim()}` : subject
+			const fullMessage = baseMessage.trim() ? `${baseMessage}\n\n[skip ci]` : null
 
-			if (originalCommitMessage !== null) {
-				originalCommitMessage += '\n\n[skip ci]'
-				// One line per -m flag
-				const splitLines = originalCommitMessage.split('\n').map(line => ['-m', line.trim()])
+			if (fullMessage !== null) {
+				// One line per -m flag; skip blank lines since each -m already acts as a paragraph separator
+				const splitLines = fullMessage.split('\n').filter(line => line.trim()).map(line => ['-m', line])
 				await git.raw(['commit', '--amend', ...splitLines.flat()])
 				debug(task, `Amended commit ${lastValidCommit.slice(0, 8)} message with [skip ci] tag`)
 			}
@@ -147,7 +149,7 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 
 export const pushBranch = async (task: Task, repoRoot: string, token: string, backportBranch: string): Promise<void> => {
 	const git = simpleGit(repoRoot)
-	git.remote(['set-url', 'origin', `https://x-access-token:${token}@github.com/${task.owner}/${task.repo}.git`])
+	await git.remote(['set-url', 'origin', `https://x-access-token:${token}@github.com/${task.owner}/${task.repo}.git`])
 	await git.raw(['push', 'origin', '--force', backportBranch])
 }
 
@@ -170,14 +172,14 @@ export const hasDiff = async (repoRoot: string, base: string, head: string, task
 }
 
 export const hasEmptyCommits = async (repoRoot: string, commits: number, task: Task): Promise<boolean> => {
-	let hasEmptyCommits = false
+	let result = false
 	for (let count = 0; count < commits; count++) {
 		if (!await hasDiff(repoRoot, `HEAD~${count}`, `HEAD~${count + 1}`, task)) {
-			hasEmptyCommits = true
+			result = true
 			break
 		}
 	}
-	return hasEmptyCommits
+	return result
 }
 
 export const getCommitTitle = async (repoRoot: string, commit: string): Promise<string|null> => {
