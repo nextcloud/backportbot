@@ -66,8 +66,8 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 				commits = extractCommitsFromPayload(body)
 				branch = extractBranchFromPayload(body)
 			} catch (e) {
-				// Add a confused reaction to the comment to indicate that we failed to understand it
-				await addReaction(authOctokit, { owner, repo, commentId: id } as Task, Reaction.CONFUSED)
+				// Add a confused reaction to the comment to indicate that we failed to understand it (fire-and-forget)
+				addReaction(authOctokit, { owner, repo, commentId: id } as Task, Reaction.CONFUSED).catch(() => {})
 				error(`├ Failed to extract commits and branch from payload: \`${body}\``)
 				continue
 			}
@@ -169,12 +169,8 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 		const isMerged = typeof payload.issue?.pull_request?.merged_at === 'string'
 
 		if (isClosed && !isMerged) {
-			try {
-				await addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.THUMBS_DOWN)
-			} catch (e) {
-				// Safely ignore
-				warn(`Failed to add reaction to comment: ${e.message}`)
-			}
+			// Add a reaction to the comment to indicate that we can't backport (fire-and-forget)
+			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.THUMBS_DOWN).catch(e => warn(`Failed to add reaction to comment: ${e.message}`))
 			error(`Ignoring comment on closed but unmerged PR ${htmlUrl}`)
 			return
 		}
@@ -184,17 +180,14 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 			commits = extractCommitsFromPayload(body)
 			branch = extractBranchFromPayload(body)
 		} catch (e) {
-			// Add a confused reaction to the comment to indicate that we failed to understand it
-			await addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.CONFUSED)
+			// Add a confused reaction to the comment to indicate that we failed to understand it (fire-and-forget)
+			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.CONFUSED).catch(() => {})
 			error(`Failed to extract commits and branch from payload: \`${body}\` on ${htmlUrl}`)
 			return
 		}
-		try {
-			if (isFriendly(body)) {
-				await addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.HEART)
-			}
-		} catch (e) {
-			warn(`Could not process friendliness: ` + e.message)
+		if (isFriendly(body)) {
+			// Fire-and-forget heart reaction for friendly requests
+			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.HEART).catch(e => warn(`Could not process friendliness: ${e.message}`))
 		}
 
 		// Start processing the request
@@ -222,7 +215,8 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 				info(`├ PR is not merged, but force flag is present, starting backport right away`)
 			} else {
 				info(`├ PR is not merged yet, waiting for merge`)
-				await addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.EYES)
+				// Fire-and-forget eyes reaction to indicate we're waiting
+				addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.EYES).catch(e => warn(`Failed to add reaction to comment: ${e.message}`))
 			}
 
 			info(`├ Repo: ${owner}/${repo}`)
@@ -267,12 +261,8 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 		} catch (e) {
 			// This should really not happen, but if it does, we want to know about it
 			if (e instanceof Error) {
-				try {
-					await addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.THUMBS_DOWN)
-				} catch (e) {
-					// Safely ignore
-					warn(`Failed to add reaction to comment: ${e.message}`)
-				}
+				// Fire-and-forget thumbs down reaction to indicate failure
+				addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.THUMBS_DOWN).catch(e => warn(`Failed to add reaction to comment: ${e.message}`))
 				error(`Failed to handle backport request: ${e.message}`)
 				return
 			}

@@ -18,13 +18,8 @@ export async function backport(task: Task): Promise<void> {
 
 	info(task, `Starting backport request`)
 
-	// Add a reaction to the comment to indicate that we're processing it
-	try {
-		await addReaction(octokit, task, Reaction.THUMBS_UP)
-	} catch (e) {
-		error(task, `Failed to add reaction to PR: ${e.message}`)
-		// continue, this is not a fatal error
-	}
+	// Add a reaction to the comment to indicate that we're processing it (fire-and-forget)
+	addReaction(octokit, task, Reaction.THUMBS_UP).catch(err => error(task, `Failed to add reaction to PR: ${err.message}`))
 
 	try {
 		// Clone and cache the repo
@@ -158,16 +153,16 @@ export async function backport(task: Task): Promise<void> {
 		}
 
 		// Success! We're done here
-		await addReaction(octokit, task, Reaction.HOORAY)
+		addReaction(octokit, task, Reaction.HOORAY).catch(err => error(task, `Failed to add reaction to PR: ${err.message}`))
 	} catch (e) {
-		// Add a thumbs down reaction to the comment to indicate that we failed
+		// Add a thumbs down reaction to the comment to indicate that we failed (fire-and-forget)
+		addReaction(octokit, task, Reaction.THUMBS_DOWN).catch(err => error(task, `Failed to add reaction to PR: ${err.message}`))
 		try {
-			await addReaction(octokit, task, Reaction.THUMBS_DOWN)
 			const failureComment = getFailureCommentBody(task, backportBranch, e?.message)
 			await commentOnPR(octokit, task, failureComment)
 			error(task, `Something went wrong during the backport process: ${e?.message}`)
-		} catch (e) {
-			error(task, `Failed to comment failure on PR: ${e.message}`)
+		} catch (innerError) {
+			error(task, `Failed to comment failure on PR: ${innerError.message}`)
 			// continue, this is not a fatal error
 		}
 
