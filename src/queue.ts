@@ -15,7 +15,7 @@ export async function addToQueue(task: Task): Promise<void> {
 			await backport(task)
 		})
 	} catch(e) {
-		error(task, e)
+		error(task, e instanceof Error ? e.message : String(e))
 		throw e
 	}
 }

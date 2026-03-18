@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { Milestone } from '@octokit/webhooks-types'
 import { getBackportBody, getFailureCommentBody, getLabelsForPR, getMilestoneFromBase } from './nextcloudUtils'
-import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
+import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
 
 describe('Match branch branch to milestone', () => {
 	const branches = [
@@ -95,57 +95,62 @@ describe('Returns labels for a backport PR', () => {
 	})
 })
 
-describe('Generates correct backport PR body', () => {
-	test('Simple backport with no issues', () => {
-		const body = getBackportBody(123, false, false, false, false)
-		expect(body).toBe(`Backport of #123${LEARN_MORE}`)
+describe('getBackportBody', () => {
+	test('returns simple body with no warnings or steps when nothing is wrong', () => {
+		const body = getBackportBody(42, false, false, false, false)
+		expect(body).toBe(`Backport of #42${LEARN_MORE}`)
 	})
 
-	test('Backport with conflicts', () => {
-		const body = getBackportBody(123, true, false, false, false)
+	test('includes conflict warning and STEP_REVIEW_CONFLICTS when hasConflicts is true', () => {
+		const body = getBackportBody(42, true, false, false, false)
 		expect(body).toContain(`Warning, ${WARN_CONFLICTS}`)
 		expect(body).toContain(`- [ ] ${STEP_REVIEW_CONFLICTS}`)
+		expect(body).not.toContain(STEP_REVIEW_CHANGES)
 	})
 
-	test('Backport with diff on partial request does not warn about diff', () => {
-		const body = getBackportBody(123, false, true, false, false, false)
+	test('includes diff warning and STEP_REVIEW_CHANGES (not STEP_REVIEW_CONFLICTS) when hasDiff and isFullRequest', () => {
+		const body = getBackportBody(42, false, true, false, false, true)
+		expect(body).toContain(`Warning, ${WARN_DIFF}`)
+		expect(body).toContain(`- [ ] ${STEP_REVIEW_CHANGES}`)
+		expect(body).not.toContain(STEP_REVIEW_CONFLICTS)
+	})
+
+	test('hasDiff without isFullRequest does not add diff warning or step', () => {
+		const body = getBackportBody(42, false, true, false, false, false)
 		expect(body).not.toContain(WARN_DIFF)
-		expect(body).toBe(`Backport of #123${LEARN_MORE}`)
+		expect(body).not.toContain(STEP_REVIEW_CHANGES)
 	})
 
-	test('Full backport with diff warns about diff', () => {
-		const body = getBackportBody(123, false, true, false, false, true)
-		expect(body).toContain(`Warning, ${WARN_DIFF}`)
-		expect(body).toContain(`- [ ] ${STEP_REVIEW_CONFLICTS}`)
-	})
-
-	test('Backport with empty commits adds remove-empty-commits step', () => {
-		const body = getBackportBody(123, false, false, true, false)
+	test('includes STEP_REMOVE_EMPTY_COMMITS when hasEmptyCommits is true', () => {
+		const body = getBackportBody(42, false, false, true, false)
 		expect(body).toContain(`- [ ] ${STEP_REMOVE_EMPTY_COMMITS}`)
 	})
 
-	test('Backport with skip-ci commits adds amend-skip-ci step', () => {
-		const body = getBackportBody(123, false, false, false, true)
+	test('includes STEP_AMEND_SKIP_CI when hasSkipCiCommits is true', () => {
+		const body = getBackportBody(42, false, false, false, true)
 		expect(body).toContain(`- [ ] ${STEP_AMEND_SKIP_CI}`)
 	})
 
-	test('Full backport with conflicts and diff uses diff warning', () => {
-		const body = getBackportBody(123, true, true, false, false, true)
-		expect(body).toContain(`Warning, ${WARN_DIFF}`)
-		expect(body).not.toContain(WARN_CONFLICTS)
+	test('deduplicates steps when both hasConflicts and hasDiff are true (full request)', () => {
+		const body = getBackportBody(42, true, true, false, false, true)
+		// STEP_REVIEW_CONFLICTS from conflicts and STEP_REVIEW_CHANGES from diff should both be present but each once
+		const conflictsCount = (body.match(new RegExp(STEP_REVIEW_CONFLICTS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length
+		const changesCount = (body.match(new RegExp(STEP_REVIEW_CHANGES.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length
+		expect(conflictsCount).toBe(1)
+		expect(changesCount).toBe(1)
 	})
 
-	test('Backport with all issues deduplicates review-conflicts step', () => {
-		const body = getBackportBody(123, true, true, true, true, true)
-		const reviewConflictsCount = (body.match(new RegExp(STEP_REVIEW_CONFLICTS, 'g')) || []).length
-		expect(reviewConflictsCount).toBe(1)
-		expect(body).toContain(`- [ ] ${STEP_REMOVE_EMPTY_COMMITS}`)
-		expect(body).toContain(`- [ ] ${STEP_AMEND_SKIP_CI}`)
+	test('warning text has no leading space', () => {
+		const body = getBackportBody(42, true, false, false, false)
+		expect(body).not.toContain('\n\n Warning,')
+		expect(body).toContain('\n\nWarning,')
 	})
 
-	test('Body always ends with learn more link', () => {
-		const body = getBackportBody(456, false, false, false, false)
-		expect(body).toContain(LEARN_MORE)
+	test('always ends with LEARN_MORE', () => {
+		expect(getBackportBody(1, true, true, true, true, true)).toContain(LEARN_MORE)
+		expect(getBackportBody(1, false, false, false, false)).toContain(LEARN_MORE)
+		expect(getBackportBody(1, true, true, true, true, true).endsWith(LEARN_MORE)).toBe(true)
+		expect(getBackportBody(1, false, false, false, false).endsWith(LEARN_MORE)).toBe(true)
 	})
 })
 

@@ -1,5 +1,5 @@
 import { Milestone } from '@octokit/webhooks-types'
-import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
+import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
 
 const compareSemanticVersions = (a: string, b: string) => {
 	// 1. Split the strings into their parts.
@@ -65,7 +65,7 @@ export const getBackportBody = (prNumber: number, hasConflicts: boolean, hasDiff
 	
 	// Check if we have a PR diff only if it's a full request
 	if (hasDiff && isFullRequest) {
-		steps.push(STEP_REVIEW_CONFLICTS)
+		steps.push(STEP_REVIEW_CHANGES)
 		warning = WARN_DIFF
 	}
 
@@ -80,7 +80,7 @@ export const getBackportBody = (prNumber: number, hasConflicts: boolean, hasDiff
 	let body = `Backport of #${prNumber}`
 
 	if (warning !== '') {
-		body += `\n\n Warning, ${warning}`
+		body += `\n\nWarning, ${warning}`
 	}
 
 	if (steps.length > 0) {
