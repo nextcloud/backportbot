@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { extractBranchFromPayload, extractCommitsFromPayload } from './payloadUtils'
+import { extractBranchFromPayload, extractCommitsFromPayload, isFriendly } from './payloadUtils'
 
 describe('Extracts valid commits from payload', () => {
 	const payloads = [
@@ -89,6 +89,34 @@ describe('Throws error for invalid branch in payload', () => {
 		test(payload, () => {
 			expect(() => extractBranchFromPayload(payload))
 				.toThrow(expectedErrors[index])
+		})
+	})
+})
+
+describe('Detects friendly payloads', () => {
+	const payloads = [
+		'/backport to stable28 please',
+		'/backport! to stable28 please',
+		'/backport 123456789 to stable28 please',
+	]
+
+	payloads.forEach(payload => {
+		test(payload, () => {
+			expect(isFriendly(payload)).toBe(true)
+		})
+	})
+})
+
+describe('Detects non-friendly payloads', () => {
+	const payloads = [
+		'/backport to stable28',
+		'/backport! to stable28',
+		'/backport 123456789 to stable28',
+	]
+
+	payloads.forEach(payload => {
+		test(payload, () => {
+			expect(isFriendly(payload)).toBe(false)
 		})
 	})
 })
