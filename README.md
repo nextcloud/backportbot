@@ -5,30 +5,50 @@ This bot aims to make it easier for contributors to maintain and support multipl
 
 ## Usage
 
-The Backportbot responds to specific commands in GitHub comments. Here are the allowed commands:
+The Backportbot responds to `/backport` commands posted in pull-request comments.
+Only repository collaborators and prior contributors can request a backport.
 
-- `/backport to <branch>`: Backport all of the pull request's commits to the specified branch.
-- `/backport <commit1> to <branch>`: Backport the specified commit to the specified branch.
-- `/backport <commit1> <commit2> to <branch>`: Backport multiple commits to the specified branch.
-- `/backport! to <branch>`: Trigger the backport request instantly without waiting for the pull request to be merged.
+- `/backport to <branch>`: Backport all non-merge commits from the pull request to the specified branch.
+- `/backport <commit> [<commit> ...] to <branch>`: Backport only the specified commit(s) to the specified branch.
+- `/backport! to <branch>`: Immediately backport all non-merge commits, without waiting for the pull request to be merged.
+- `/backport! <commit> [<commit> ...] to <branch>`: Immediately backport the specified commit(s).
 
-### Examples:
+### Examples
 
-1. `/backport to stable28`: Backport all of the PR's commits to the stable28 branch.
-2. `/backport abc456def to stable28`: Backport the commit with hash abc456def to the stable28 branch.
-3. `/backport abc456def 123ghi789 to stable28`: Backport both commit abc456def and 123ghi789 to the stable28 branch.
-4. `/backport! to stable28`: Trigger the backport request instantly without waiting for PR to be merged.
+1. `/backport to stable28`: Backport all non-merge commits from the PR to the `stable28` branch.
+2. `/backport abc456def to stable28`: Backport the commit with hash `abc456def` to the `stable28` branch.
+3. `/backport abc456def 123456789 to stable28`: Backport both specified commits (`abc456def` and `123456789`) to the `stable28` branch.
+4. `/backport! to stable28`: Immediately backport all non-merge commits from the PR to `stable28`.
+5. `/backport! abc456def to stable28`: Immediately backport the specified commit (`abc456def`) to `stable28`.
 
 ## How it Works
 
-The Backportbot monitors GitHub comments for the specified commands. When triggered and approved, it will wait for the PR to be merged and automatically create backport requests to the specified branches. In case of duplicates branches in the commands, the most recent one will always be used and the other dropped.
+The Backportbot monitors GitHub comments for the specified commands.
+
+When triggered, the bot creates a backport pull request for the requested target branch and
+commits.
+
+A standard request made before merge waits until the original pull request is merged. The bot
+then creates the backport pull request and requests reviews from eligible approved reviewers of
+the original pull request, as well as its author.
+
+A forced request (`/backport!`) runs immediately, without waiting for the original pull request
+to be merged.
+
+The bot cherry-picks the requested commits, pushes a `backport/<pr-number>/<target-branch>`
+branch, and opens a pull request targeting the requested branch. Backports with conflicts are
+opened as draft pull requests and include a warning.
+
+If several non-forced requests target the same branch, the most recent valid request is used
+when the original pull request is merged.
 
 ### Reactions and their meanings
 
-- 👀 The command is valid and the bot is waiting for the PR to be merged
-- 😕 The command is not valid
-- 👍 The bot started processing that comment/request
-- 👎 The bot failed to execute tha backport. A comment with steps and additional informations on the failure will also be added.
+- 👀 The request is valid and the bot is waiting for the PR to be merged.
+- 😕 The bot could not parse the command.
+- 👍 The backport request is being processed.
+- 🎉 The backport completed successfully.
+- 👎 The backport failed. The bot attempts to add manual backport instructions in a comment.
 
 ## Contribution
 
