@@ -3,6 +3,24 @@ import { getApp } from './appUtils'
 import { AuthResponse, COMMAND_PREFIX, PRChanges, Task } from './constants'
 import { IssueComment, Milestone } from '@octokit/webhooks-types'
 
+// Users allowed to request backports through PR comments.
+//
+// CONTRIBUTOR is intentionally included for users who have previously
+// contributed commits to the repository, even if they do not currently
+// have repository write access. Backport PRs still go thru normal
+// approval/merge process once created.
+const BACKPORT_REQUEST_ASSOCIATIONS = new Set([
+	'OWNER',
+	'MEMBER',
+	'COLLABORATOR',
+	'CONTRIBUTOR',
+])
+
+export const isAllowedBackportAuthorAssociation = (authorAssociation?: string): boolean => {
+	return authorAssociation !== undefined &&
+		BACKPORT_REQUEST_ASSOCIATIONS.has(authorAssociation)
+}
+
 export enum Reaction {
 	THUMBS_UP = '+1',
 	THUMBS_DOWN = '-1',
@@ -218,8 +236,8 @@ export const getBackportRequestsFromPR = async (octokit: Octokit, task: Task): P
 		.filter(comment => comment?.body?.trim().startsWith(COMMAND_PREFIX))
 		// Filter out forced requests
 		.filter(comment => !comment?.body?.trim().startsWith(COMMAND_PREFIX + '!'))
-		// Filter out comments from non-collaborators
-		.filter(comment => comment?.author_association !== 'NONE')
+		// Filter out comments from users not authorized to request backports
+		.filter(comment => isAllowedBackportAuthorAssociation(comment?.author_association))
 		// Filter out comments that got rejected by the bot.
 		// This is a safety measure, we will check the command again
 		.filter(comment => comment.reactions?.confused === 0) as IssueComment[]
