@@ -294,7 +294,14 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 			const prTask = { owner, repo } as Task
 
-			await addPRLabel(authOctokit, prTask, prNumber, LABEL_BACKPORT)
+			try {
+				await addPRLabel(authOctokit, prTask, prNumber, LABEL_BACKPORT)
+			} catch (e) {
+				error(
+					`Failed to set labels on PR: ` +
+					`${e instanceof Error ? e.message : String(e)}`,
+				)
+			}
 
 			if (isMerged || request.isForced) {
 				const results = await Promise.allSettled(
