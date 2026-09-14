@@ -35,6 +35,10 @@ const expandBranches = (value: string): string[] => {
 		const start = Number(range[1])
 		const end = Number(range[2])
 
+		if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end)) {
+			throw new Error(`Branch range numbers are too large: \`${value}\``)
+		}
+
 		if (start > end) {
 			throw new Error(`Branch range must be ascending: \`${value}\``)
 		}
