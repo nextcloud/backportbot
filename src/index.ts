@@ -4,8 +4,22 @@ import { info, error, warn } from 'node:console'
 import { Octokit } from '@octokit/rest'
 
 import { addToQueue } from './queue.js'
-import { ALLOWED_ORGS, CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET, WORK_DIRNAME } from './constants.js'
-import { extractBranchFromPayload, extractCommitsFromPayload, isFriendly } from './payloadUtils.js'
+import {
+	ALLOWED_ORGS,
+	CACHE_DIRNAME,
+	COMMAND_PREFIX,
+	LABEL_BACKPORT,
+	PRIVATE_KEY_PATH,
+	ROOT_DIR,
+	SERVE_HOST,
+	SERVE_PORT,
+	Task,
+	WEBHOOK_SECRET,
+	WORK_DIRNAME,
+} from './constants.js'
+import type { BackportRequest } from './constants.js'
+import { parseBackportRequest } from './payloadUtils.js'
+import { createTasks } from './taskUtils.js'
 import { getApp } from './appUtils.js'
 import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, isAllowedBackportAuthorAssociation, removePRLabel } from './githubUtils.js'
 import { setGlobalGitConfig } from './gitUtils.js'
@@ -56,57 +70,67 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 	const tasksToProcess: Task[] = []
 
 	// Process each comment
-	for(const { id, body } of comments) {
+	for (const { id, body } of comments) {
 		try {
-			let branch: string
-			let commits: string[] = []
-		
-			// Extract the commits and branch from the payload
-			try {
-				commits = extractCommitsFromPayload(body)
-				branch = extractBranchFromPayload(body)
-			} catch (e) {
-				// Add a confused reaction to the comment to indicate that we failed to understand it (fire-and-forget)
-				addReaction(authOctokit, { owner, repo, commentId: id } as Task, Reaction.CONFUSED).catch(() => {})
-				error(`├ Failed to extract commits and branch from payload: \`${body}\``)
-				continue
+			let request = parseBackportRequest(body)
+
+			if (request.isFullRequest) {
+				request = {
+					...request,
+					commits: await getCommitsForPR(
+						authOctokit,
+						owner,
+						repo,
+						prNumber,
+					),
+				}
 			}
 
-			if (processedBranches.has(branch)) {
-				info(`├ Skipping duplicate backport request to \`${branch}\``)
-				continue
+			const tasks = createTasks(
+				{
+					owner,
+					repo,
+					prNumber,
+					prTitle,
+					commentId: id,
+					installationId,
+					author,
+				},
+				request,
+			)
+
+			for (const task of tasks) {
+				if (processedBranches.has(task.branch)) {
+					info(`├ Skipping duplicate backport request to \`${task.branch}\``)
+					continue
+				}
+
+				processedBranches.add(task.branch)
+				tasksToProcess.push(task)
+
+				const requestType = task.isFullRequest ? 'Full' : 'Partial'
+				info(
+					`├ ${requestType} backport request to \`${task.branch}\` ` +
+					`with ${task.commits.length} commits`,
+				)
 			}
-
-			const isFullRequest = body.trim().startsWith(COMMAND_PREFIX + TO_SEPARATOR)
-			if (isFullRequest) {
-				commits = await getCommitsForPR(authOctokit, owner, repo, prNumber)
-				info(`├ Full backport request to \`${branch}\` with ${commits.length} commits`)
-			} else {
-				info(`├ Partial backport request to \`${branch}\` with ${commits.length} commits`)
-			}
-
-			const task = {
-				owner,
-				repo,
-				branch,
-				commits,
-				prNumber,
-				prTitle,
-				commentId: id,
-				installationId,
-				author,
-				isFullRequest,
-			} as Task
-
-			processedBranches.add(branch)
-			tasksToProcess.push(task)
 		} catch (e) {
-			error(`├ Failed to handle \`${body}\` request: ${e.message}`)
+			addReaction(
+				authOctokit,
+				{ owner, repo, commentId: id } as Task,
+				Reaction.CONFUSED,
+			).catch(() => {})
+
+			error(
+				`├ Failed to handle \`${body}\`: ` +
+				`${e instanceof Error ? e.message : String(e)}`,
+			)
 		}
 	}
 
 	// Process the tasks
 	const tasks = tasksToProcess.map(task => addToQueue(task))
+
 	Promise.allSettled(tasks).then(async results => {
 		const hasFailedTasks = results.some(result => result.status === 'rejected')
 
@@ -160,11 +184,6 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 			return
 		}
 
-		let branch: string
-		let commits: string[] = []
-
-		const isForcedRequest = body.trim().startsWith(COMMAND_PREFIX + '!')
-		const isFullRequest = body.trim().startsWith(isForcedRequest ? COMMAND_PREFIX + '!' + TO_SEPARATOR : COMMAND_PREFIX + TO_SEPARATOR)
 		const isClosed = payload.issue?.state === 'closed'
 		const isMerged = typeof payload.issue?.pull_request?.merged_at === 'string'
 
@@ -175,97 +194,147 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 			return
 		}
 
-		// Extract the commits and branch from the payload
+		// Extract and validate the request
+		let request: BackportRequest
+
 		try {
-			commits = extractCommitsFromPayload(body)
-			branch = extractBranchFromPayload(body)
+			request = parseBackportRequest(body)
 		} catch (e) {
-			// Add a confused reaction to the comment to indicate that we failed to understand it (fire-and-forget)
-			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.CONFUSED).catch(() => {})
-			error(`Failed to extract commits and branch from payload: \`${body}\` on ${htmlUrl}`)
+			addReaction(
+				authOctokit,
+				{ owner, repo, commentId } as Task,
+				Reaction.CONFUSED,
+			).catch(() => {})
+
+			error(
+				`Failed to parse backport request: \`${body}\` on ${htmlUrl}: ` +
+				`${e instanceof Error ? e.message : String(e)}`,
+			)
 			return
 		}
-		if (isFriendly(body)) {
-			// Fire-and-forget heart reaction for friendly requests
-			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.HEART).catch(e => warn(`Could not process friendliness: ${e.message}`))
+
+		if (request.isFriendly) {
+			addReaction(
+				authOctokit,
+				{ owner, repo, commentId } as Task,
+				Reaction.HEART,
+			).catch(e =>
+				warn(`Could not process friendliness: ${e.message}`),
+			)
 		}
 
 		// Start processing the request
 		try {
-			// If we have no commits, and the request did specify some commits
-			// then something went wrong.
-			// /backport `5e83e97 to stable28` means we backport 5e83e97 to stable28
-			// /backport to stable28 means we backport all commits from this PR to stable28
-			if (commits.length === 0 && !isFullRequest) {
+			if (!request.isFullRequest && request.commits.length === 0) {
 				throw new Error('No commits found in payload')
 			}
 
-			if (isFullRequest) {
-				info(`\nReceived full backport request to \`${branch}\``)
+			if (request.isFullRequest) {
+				info(
+					`\nReceived full backport request to ` +
+					`${request.branches.join(', ')}`,
+				)
 				info(`├ Fetching commits from PR ${htmlUrl}...`)
-				commits = await getCommitsForPR(authOctokit, owner, repo, prNumber)
+
+				request = {
+					...request,
+					commits: await getCommitsForPR(
+						authOctokit,
+						owner,
+						repo,
+						prNumber,
+					),
+				}
 			} else {
-				info(`\nReceived partial backport request to \`${branch}\``)
+				info(
+					`\nReceived partial backport request to ` +
+					`${request.branches.join(', ')}`,
+				)
 			}
 
-			// PR info
 			if (isMerged) {
 				info(`├ PR is merged, starting backport right away`)
-			} else if (isForcedRequest) {
-				info(`├ PR is not merged, but force flag is present, starting backport right away`)
+			} else if (request.isForced) {
+				info(
+					`├ PR is not merged, but force flag is present, ` +
+					`starting backport right away`,
+				)
 			} else {
 				info(`├ PR is not merged yet, waiting for merge`)
-				// Fire-and-forget eyes reaction to indicate we're waiting
-				addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.EYES).catch(e => warn(`Failed to add reaction to comment: ${e.message}`))
+
+				addReaction(
+					authOctokit,
+					{ owner, repo, commentId } as Task,
+					Reaction.EYES,
+				).catch(e =>
+					warn(`Failed to add reaction to comment: ${e.message}`),
+				)
 			}
 
 			info(`├ Repo: ${owner}/${repo}`)
 			info(`├ Author: ${author}`)
 			info(`├ Actor: ${actor}`)
-			info(`└ Commits: ${commits.map(commit => commit.slice(0, 8)).join(' ')}\n`)
+			info(
+				`└ Branches: ${request.branches.join(', ')}\n` +
+				`  Commits: ${request.commits.map(commit => commit.slice(0, 8)).join(' ')}`,
+			)
 
-			const task = {
-				owner,
-				repo,
-				branch,
-				commits,
-				prNumber,
-				prTitle,
-				commentId,
-				installationId,
-				author,
-				isFullRequest
-			} as Task
+			const tasks = createTasks(
+				{
+					owner,
+					repo,
+					prNumber,
+					prTitle,
+					commentId,
+					installationId,
+					author,
+				},
+				request,
+			)
 
-			// Add the backport label to the PR
-			try {
-				await addPRLabel(authOctokit, task, prNumber, LABEL_BACKPORT)
-			} catch (e) {
-				error(`Failed to set labels on PR: ${e.message}`)
-			}
+			const prTask = { owner, repo } as Task
 
-			// If the PR is already merged, we can start the backport right away
-			if (isMerged || isForcedRequest) {
-				try {
-					await addToQueue(task)
-					// Remove the backport label from the PR on success
+			await addPRLabel(authOctokit, prTask, prNumber, LABEL_BACKPORT)
+
+			if (isMerged || request.isForced) {
+				const results = await Promise.allSettled(
+					tasks.map(task => addToQueue(task)),
+				)
+
+				const hasFailedTasks = results.some(
+					result => result.status === 'rejected',
+				)
+
+				if (!hasFailedTasks) {
 					try {
-						await removePRLabel(authOctokit, task, prNumber, LABEL_BACKPORT)
+						await removePRLabel(
+							authOctokit,
+							prTask,
+							prNumber,
+							LABEL_BACKPORT,
+						)
 					} catch (e) {
-						error(`\nFailed to remove backport label from PR ${htmlUrl}: ${e.message}`)
+						error(
+							`\nFailed to remove backport label from PR ${htmlUrl}: ` +
+							`${e instanceof Error ? e.message : String(e)}`,
+						)
 					}
-				} catch (e) {
-					// Safely ignore
 				}
 			}
 		} catch (e) {
-			// This should really not happen, but if it does, we want to know about it
 			if (e instanceof Error) {
-				// Fire-and-forget thumbs down reaction to indicate failure
-				addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.THUMBS_DOWN).catch(e => warn(`Failed to add reaction to comment: ${e.message}`))
+				addReaction(
+					authOctokit,
+					{ owner, repo, commentId } as Task,
+					Reaction.THUMBS_DOWN,
+				).catch(e =>
+					warn(`Failed to add reaction to comment: ${e.message}`),
+				)
+
 				error(`Failed to handle backport request: ${e.message}`)
 				return
 			}
+
 			error('Failed to handle backport request, unknown error')
 		}
 	}
