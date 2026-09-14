@@ -70,19 +70,23 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 	const tasksToProcess: Task[] = []
 
 	// Process each comment
+	let fullRequestCommits: string[] | undefined
+
 	for (const { id, body } of comments) {
 		try {
 			let request = parseBackportRequest(body)
 
 			if (request.isFullRequest) {
+				fullRequestCommits ??= await getCommitsForPR(
+					authOctokit,
+					owner,
+					repo,
+					prNumber,
+				)
+
 				request = {
 					...request,
-					commits: await getCommitsForPR(
-						authOctokit,
-						owner,
-						repo,
-						prNumber,
-					),
+					commits: fullRequestCommits,
 				}
 			}
 
