@@ -29,6 +29,8 @@ export const COMMAND_PREFIX = '/backport'
 export const TO_SEPARATOR = ' to '
 export const COMMIT_REGEX = /^\b[0-9a-f]{7,40}$\b/i
 export const BRANCH_REGEX = /^\b[a-z0-9-_./]{1,100}\b$/i
+export const STABLE_BRANCH_RANGE_REGEX = /^stable(\d+)\.\.stable(\d+)$/i
+export const MAX_BRANCHES_PER_REQUEST = 10
 
 // Pull requests variables
 export const LABEL_BACKPORT = 'backport-request'
@@ -57,6 +59,14 @@ export type Task = {
 	commentId: number
 	author: string
 	isFullRequest: boolean
+}
+
+export type BackportRequest = {
+	commits: string[]
+	branches: string[]
+	isForced: boolean
+	isFullRequest: boolean
+	isFriendly: boolean
 }
 
 export enum CherryPickResult {
