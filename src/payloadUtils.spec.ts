@@ -219,4 +219,34 @@ describe('parseBackportRequest', () => {
 			isFriendly: false,
 		})
 	})
+
+	test('rejects leading zeroes in stable branch ranges', () => {
+		expect(() =>
+			parseBackportRequest('/backport to stable028..stable031'),
+		).toThrow('leading zeroes')
+	})
+
+	test('rejects a command prefix lookalike', () => {
+		expect(() =>
+			parseBackportRequest('/backporting to stable28'),
+		).toThrow('Invalid backport command')
+	})
+
+	test('rejects a forced command prefix lookalike', () => {
+		expect(() =>
+			parseBackportRequest('/backport!foo to stable28'),
+		).toThrow('Invalid backport command')
+	})
+
+	test('rejects an empty command', () => {
+		expect(() =>
+			parseBackportRequest('/backport'),
+		).toThrow('Missing branch target')
+	})
+
+	test('rejects a forced empty command', () => {
+		expect(() =>
+			parseBackportRequest('/backport!'),
+		).toThrow('Missing branch target')
+	})
 })
