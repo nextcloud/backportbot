@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { BackportRequest } from './constants'
+import type { BackportRequest } from './constants'
 import { createTasks } from './taskUtils'
 
 describe('createTasks', () => {
