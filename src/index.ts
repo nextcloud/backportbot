@@ -7,7 +7,7 @@ import { addToQueue } from './queue.js'
 import { ALLOWED_ORGS, CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET, WORK_DIRNAME } from './constants.js'
 import { extractBranchFromPayload, extractCommitsFromPayload, isFriendly } from './payloadUtils.js'
 import { getApp } from './appUtils.js'
-import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, removePRLabel } from './githubUtils.js'
+import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, isAllowedBackportAuthorAssociation, removePRLabel } from './githubUtils.js'
 import { setGlobalGitConfig } from './gitUtils.js'
 
 const app = getApp()
@@ -152,11 +152,11 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 
 	// Check if the comment is a backport request
 	if (body.trim().startsWith(COMMAND_PREFIX)) {
-		// Check if the author is at least a collaborator
+		// Check if the author is allowed to request a backport
 		const commentAuthor = payload?.comment?.user.login
 		const authorAssociation = payload?.comment?.author_association
-		if (!authorAssociation || authorAssociation === 'NONE') {
-			info(`Ignoring comment from non-collaborator: ${commentAuthor}`)
+		if (!isAllowedBackportAuthorAssociation(authorAssociation)) {
+			info(`Ignoring backport request from unauthorized user: ${commentAuthor}`)
 			return
 		}
 
