@@ -1,4 +1,4 @@
-import { BackportRequest, Task } from './constants.js'
+import type { BackportRequest, Task } from './constants.js'
 
 type TaskContext = Omit<
 	Task,
