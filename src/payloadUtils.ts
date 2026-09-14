@@ -32,6 +32,13 @@ const expandBranches = (value: string): string[] => {
 	const range = value.match(STABLE_BRANCH_RANGE_REGEX)
 
 	if (range) {
+		if (
+			(range[1].length > 1 && range[1].startsWith('0')) ||
+			(range[2].length > 1 && range[2].startsWith('0'))
+		) {
+			throw new Error(`Stable branch numbers must not contain leading zeroes: \`${value}\``)
+		}
+	
 		const start = Number(range[1])
 		const end = Number(range[2])
 
