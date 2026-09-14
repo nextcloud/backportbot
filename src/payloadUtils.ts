@@ -5,10 +5,10 @@ import {
 	MAX_BRANCHES_PER_REQUEST,
 	STABLE_BRANCH_RANGE_REGEX,
 	TO_SEPARATOR,
-	BackportRequest,
 } from './constants'
+import type { BackportRequest } from './constants'
 
-const getFirstLine = (payload: string): string => {
+const getCommandLine = (payload: string): string => {
 	return payload.split('\n')[0].trim()
 }
 
@@ -72,26 +72,31 @@ const expandBranches = (value: string): string[] => {
 }
 
 export const parseBackportRequest = (payload: string): BackportRequest => {
-	const firstLine = getFirstLine(payload)
-	const isForced = firstLine.startsWith(`${COMMAND_PREFIX}!`)
-	const prefix = isForced ? `${COMMAND_PREFIX}!` : COMMAND_PREFIX
+	const commandLine = getCommandLine(payload)
 
-	if (!firstLine.startsWith(prefix)) {
+	const commandMatch = commandLine.match(
+		/^\/backport(!)?(?:\s+(.*))?$/i,
+	)
+
+	if (!commandMatch) {
 		throw new Error(`Invalid backport command: \`${payload}\``)
 	}
 
-	const isFriendly = /\s+please$/i.test(firstLine)
-	const command = firstLine
-		.slice(prefix.length)
+	const isForced = Boolean(commandMatch[1])
+	const isFriendly = /\s+please$/i.test(commandLine)
+
+	const command = (commandMatch[2] ?? '')
 		.replace(/\s+please$/i, '')
 		.trim()
 
 	const separatorIndex = command.indexOf(TO_SEPARATOR)
+
 	if (separatorIndex === -1) {
 		throw new Error(`Missing branch target in payload: \`${payload}\``)
 	}
 
 	const commitsPart = command.slice(0, separatorIndex).trim()
+
 	const branchesPart = command
 		.slice(separatorIndex + TO_SEPARATOR.length)
 		.trim()
