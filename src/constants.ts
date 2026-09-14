@@ -15,7 +15,14 @@ export const CACHE_DIRNAME = 'cache' // relative to the root dir
 export const WORK_DIRNAME = 'work' // relative to the root dir
 
 // Nextcloud variables
-export const ALLOWED_ORGS = ['nextcloud', 'nextcloud-libraries', 'skjnldsv']
+const DEFAULT_ALLOWED_ORGS = ['nextcloud', 'nextcloud-libraries', 'skjnldsv']
+const configuredAllowedOrgs = process.env.ALLOWED_ORGS
+	?.split(/\s+/)
+	.map(org => org.trim())
+	.filter(Boolean)
+export const ALLOWED_ORGS = configuredAllowedOrgs && configuredAllowedOrgs.length > 0
+	? configuredAllowedOrgs
+	: DEFAULT_ALLOWED_ORGS
 
 // App variables
 export const APP_ID = process.env.APP_ID || 0
