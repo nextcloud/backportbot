@@ -189,4 +189,34 @@ describe('parseBackportRequest', () => {
 			parseBackportRequest('/backport to stable28..main'),
 		).toThrow('Branch name')
 	})
+
+	test('rejects ranges larger than the maximum', () => {
+		expect(() =>
+			parseBackportRequest('/backport to stable28..stable39'),
+		).toThrow('maximum is 10')
+	})
+
+	test('parses a forced full range request', () => {
+		expect(
+			parseBackportRequest('/backport! to stable28..stable31'),
+		).toEqual({
+			commits: [],
+			branches: ['stable28', 'stable29', 'stable30', 'stable31'],
+			isForced: true,
+			isFullRequest: true,
+			isFriendly: false,
+		})
+	})
+
+	test('ignores text after the command line', () => {
+		expect(
+			parseBackportRequest('/backport to stable28\nAdditional context'),
+		).toEqual({
+			commits: [],
+			branches: ['stable28'],
+			isForced: false,
+			isFullRequest: true,
+			isFriendly: false,
+		})
+	})
 })
