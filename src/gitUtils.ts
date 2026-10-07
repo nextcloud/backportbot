@@ -127,16 +127,12 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 				to: `${lastValidCommit}~1`,
 				multiLine: true,
 			})
-			const subject = commitLog?.latest?.message ?? ''
-			const body = commitLog?.latest?.body ?? ''
-			// Reconstruct full commit message from subject + body, then append [skip ci]
-			const baseMessage = body.trim() ? `${subject}\n\n${body.trim()}` : subject
-			const fullMessage = baseMessage.trim() ? `${baseMessage}\n\n[skip ci]` : null
+			// With multiLine, body is the raw message (%B), subject included
+			const rawMessage = (commitLog?.latest?.body ?? '').trim()
 
-			if (fullMessage !== null) {
-				// One line per -m flag; skip blank lines since each -m already acts as a paragraph separator
-				const splitLines = fullMessage.split('\n').filter(line => line.trim()).map(line => ['-m', line])
-				await git.raw(['commit', '--amend', ...splitLines.flat()])
+			if (rawMessage) {
+				// Single -m keeps the original line breaks intact
+				await git.raw(['commit', '--amend', '-m', `${rawMessage}\n\n[skip ci]`])
 				debug(task, `Amended commit ${lastValidCommit.slice(0, 8)} message with [skip ci] tag`)
 			}
 		} catch (e) {
