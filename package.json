@@ -46,7 +46,7 @@
     "@vitest/coverage-istanbul": "^2.1.8",
     "eslint": "^8.57.1",
     "typescript": "^5.9.3",
-    "vitest": "^2.0.5"
+    "vitest": "^4.1.0"
   },
   "engines": {
     "node": "^24.0.0",
