@@ -30,13 +30,13 @@
   },
   "homepage": "https://github.com/skjnldsv/backportbot#readme",
   "dependencies": {
-    "@octokit/app": "^16.1.2",
+    "@octokit/app": "^16.1.4",
     "@octokit/rest": "^22.0.1",
     "@octokit/webhooks": "^14.2.0",
     "@octokit/webhooks-types": "^7.6.1",
-    "p-queue": "^9.0.0",
-    "simple-git": "^3.29.0",
-    "tsx": "^4.20.6"
+    "p-queue": "^10.0.0",
+    "simple-git": "^4.0.2",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.11",
