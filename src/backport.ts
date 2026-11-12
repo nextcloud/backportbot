@@ -12,8 +12,8 @@ export async function backport(task: Task): Promise<void> {
 	const octokit = new Octokit({ auth: token })
 
 	let tmpDir: string = ''
-	let prNumber: number = 0
-	let conflicts: CherryPickResult|null = null
+	let prNumber: number
+	let conflicts: CherryPickResult
 	const backportBranch = `backport/${task.prNumber}/${task.branch}`
 
 	info(task, `Starting backport request`)
@@ -27,7 +27,7 @@ export async function backport(task: Task): Promise<void> {
 			tmpDir = await cloneAndCacheRepo(task, backportBranch)
 			info(task, `Cloned to ${tmpDir}`)
 		} catch (e) {
-			throw new Error(`Failed to clone repository: ${e.message}`)
+			throw new Error(`Failed to clone repository: ${e.message}`, { cause: e })
 		}
 
 		// Cherry pick the commits
@@ -39,7 +39,7 @@ export async function backport(task: Task): Promise<void> {
 				info(task, `Cherry picking commits successful`)
 			}
 		} catch (e) {
-			throw new Error(`Failed to cherry pick commits: ${e.message}`)
+			throw new Error(`Failed to cherry pick commits: ${e.message}`, { cause: e })
 		}
 
 		try {
@@ -49,7 +49,7 @@ export async function backport(task: Task): Promise<void> {
 				throw new Error(`No changes found in backport branch`)
 			}
 		} catch (e) {
-			throw new Error(`Failed to check for changes with origin/${task.branch}: ${e.message}`)
+			throw new Error(`Failed to check for changes with origin/${task.branch}: ${e.message}`, { cause: e })
 		}
 
 		// Push the branch
@@ -57,7 +57,7 @@ export async function backport(task: Task): Promise<void> {
 			await pushBranch(task, tmpDir, token, backportBranch)
 			info(task, `Pushed branch ${backportBranch}`)
 		} catch (e) {
-			throw new Error(`Failed to push branch ${backportBranch}: ${e.message}`)
+			throw new Error(`Failed to push branch ${backportBranch}: ${e.message}`, { cause: e })
 		}
 
 		// If only one commit, we use it as the PR title
@@ -91,7 +91,7 @@ export async function backport(task: Task): Promise<void> {
 				error(task, `Failed to request reviews: ${e.message}`)
 			}
 		} catch (e) {
-			throw new Error(`Failed to create pull request: ${e.message}`)
+			throw new Error(`Failed to create pull request: ${e.message}`, { cause: e })
 		}
 
 		// Get labels from original PR and set them on the new PR
@@ -166,7 +166,7 @@ export async function backport(task: Task): Promise<void> {
 			// continue, this is not a fatal error
 		}
 
-		throw new Error(`Failed to backport: ${e.message}`)
+		throw new Error(`Failed to backport: ${e.message}`, { cause: e })
 	} finally {
 		// Remove the temp dir if it exists
 		if (tmpDir !== '' && existsSync(tmpDir)) {

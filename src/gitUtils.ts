@@ -43,7 +43,7 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 			debug(task, `Repo already cached at ${cachedRepoRoot}`)
 		}
 	} catch (e) {
-		throw new Error(`Failed to clone and cache repo: ${e.message}`)
+		throw new Error(`Failed to clone and cache repo: ${e.message}`, { cause: e })
 	}
 
 	// Init a new temp repo in the work dir
@@ -74,7 +74,7 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 		// create work tree with up-to-date content of that branch
 		await git.raw(['worktree', 'add', '-b', backportBranch, tmpRepoRoot, `origin/${branch}`])
 	} catch (e) {
-		throw new Error(`Failed to create working tree: ${e.message}`)
+		throw new Error(`Failed to create working tree: ${e.message}`, { cause: e })
 	}
 
 	return tmpRepoRoot
@@ -135,7 +135,7 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 				await git.raw(['commit', '--amend', '-m', `${rawMessage}\n\n[skip ci]`])
 				debug(task, `Amended commit ${lastValidCommit.slice(0, 8)} message with [skip ci] tag`)
 			}
-		} catch (e) {
+		} catch {
 			error(task, `Could not get commit ${lastValidCommit.slice(0, 8)} message from git log`)
 		}
 	}

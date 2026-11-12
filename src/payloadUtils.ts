@@ -17,7 +17,7 @@ export const extractCommitsFromPayload = (payload: string): string[] => {
 
 		return commits.filter(commit => COMMIT_REGEX.test(commit))
 	} catch (e) {
-		throw new Error(`Failed to extract commits from payload: \`${payload}\``)
+		throw new Error(`Failed to extract commits from payload: \`${payload}\``, { cause: e })
 	}
 }
 
