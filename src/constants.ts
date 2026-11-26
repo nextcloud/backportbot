@@ -15,7 +15,7 @@ export const CACHE_DIRNAME = 'cache' // relative to the root dir
 export const WORK_DIRNAME = 'work' // relative to the root dir
 
 // Nextcloud variables
-export const ALLOWED_ORGS = ['nextcloud', 'nextcloud-libraries', 'skjnldsv']
+export const ALLOWED_ORGS = ['nextcloud', 'nextcloud-libraries', 'skjnldsv', 'Euro-Office']
 
 // App variables
 export const APP_ID = process.env.APP_ID || 0
