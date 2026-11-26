@@ -1,8 +1,8 @@
 import { Octokit } from '@octokit/rest'
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test } from 'vitest'
 
 import { Task } from './constants'
-import { getBackportRequestsFromPR, isAllowedBackportAuthorAssociation, isAllowedForcedBackportAuthorAssociation } from './githubUtils'
+import { getAvailableLabels, getBackportRequestsFromPR, getCommitsForPR, isAllowedBackportAuthorAssociation, isAllowedForcedBackportAuthorAssociation } from './githubUtils'
 
 describe('Backport request permissions', () => {
 	test.each([
@@ -28,8 +28,7 @@ describe('Backport requests of a merged pull request', () => {
 	})
 
 	const requestsFrom = async (comments: ReturnType<typeof comment>[]) => {
-		const octokit = { rest: { issues: { listComments: vi.fn().mockResolvedValue({ data: comments }) } } } as unknown as Octokit
-		const requests = await getBackportRequestsFromPR(octokit, { owner: 'nextcloud', repo: 'server', prNumber: 1 } as Task)
+		const requests = await getBackportRequestsFromPR(pagedOctokit(comments), { owner: 'nextcloud', repo: 'server', prNumber: 1 } as Task)
 		return requests.map(({ id }) => id)
 	}
 
@@ -44,5 +43,50 @@ describe('Backport requests of a merged pull request', () => {
 			comment(3, '/backport to stable33', 'NONE'),
 			comment(4, '/backport to stable32', 'CONTRIBUTOR'),
 		])).toEqual([4])
+	})
+})
+
+// Serves `items` 100 per page, with the Link header GitHub sends
+const pagedOctokit = (items: unknown[]) => new Octokit({
+	request: {
+		fetch: async (url: string) => {
+			const page = Number(new URL(url).searchParams.get('page') ?? '1')
+			const pages = Math.max(1, Math.ceil(items.length / 100))
+			const headers: Record<string, string> = { 'content-type': 'application/json' }
+			if (page < pages) {
+				const next = new URL(url)
+				next.searchParams.set('page', String(page + 1))
+				headers.link = `<${next}>; rel="next"`
+			}
+			return new Response(JSON.stringify(items.slice((page - 1) * 100, page * 100)), { status: 200, headers })
+		},
+	},
+})
+
+const task = { owner: 'nextcloud', repo: 'server', prNumber: 1 } as Task
+
+describe('GitHub lists are read past the first page', () => {
+	test('commits of a pull request', async () => {
+		const commits = Array.from({ length: 140 }, (_, i) => ({ sha: `sha${i}`, parents: [{}] }))
+		expect(await getCommitsForPR(pagedOctokit(commits), 'nextcloud', 'server', 1)).toHaveLength(140)
+	})
+
+	test('backport requests after the 100th comment', async () => {
+		const comments = Array.from({ length: 120 }, (_, i) => ({ id: i, body: 'LGTM', author_association: 'MEMBER' }))
+		comments.push({ id: 999, body: '/backport to stable33', author_association: 'MEMBER' })
+		const requests = await getBackportRequestsFromPR(pagedOctokit(comments), task)
+		expect(requests.map(({ id }) => id)).toEqual([999])
+	})
+
+	test('labels of a repository', async () => {
+		const labels = Array.from({ length: 150 }, (_, i) => ({ name: i === 149 ? '3. to review' : `label ${i}` }))
+		expect(await getAvailableLabels(pagedOctokit(labels), task)).toContain('3. to review')
+	})
+})
+
+describe('Pull requests GitHub cannot fully list', () => {
+	test('fail instead of backporting only part of the commits', async () => {
+		const commits = Array.from({ length: 250 }, (_, i) => ({ sha: `sha${i}`, parents: [{}] }))
+		await expect(getCommitsForPR(pagedOctokit(commits), 'nextcloud', 'server', 1)).rejects.toThrow('250 commits or more')
 	})
 })
