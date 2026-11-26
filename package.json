@@ -1,6 +1,6 @@
 {
   "name": "backportbot",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A bot that backport commits to other branches",
   "main": "index.ts",
   "type": "module",
