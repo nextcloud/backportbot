@@ -1,0 +1,9 @@
+.git
+.github
+.vscode
+node_modules
+cache
+work
+coverage
+*.pem
+*.log
