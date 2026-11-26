@@ -200,3 +200,11 @@ export const getCommitTitle = async (repoRoot: string, commit: string): Promise<
 	})
 	return log.latest?.message || null
 }
+
+/**
+ * Counts the commits on HEAD that are not on base, the ones a backport added.
+ */
+export const countCommitsSince = async (repoRoot: string, base: string): Promise<number> => {
+	const git = simpleGit(repoRoot)
+	return Number((await git.raw(['rev-list', '--count', `${base}..HEAD`])).trim())
+}

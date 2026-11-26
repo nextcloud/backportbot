@@ -1,5 +1,5 @@
 import { Milestone } from '@octokit/webhooks-types'
-import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
+import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, ROOT_DIR, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
 
 const compareSemanticVersions = (a: string, b: string) => {
 	// 1. Split the strings into their parts.
@@ -93,6 +93,17 @@ export const getBackportBody = (prNumber: number, hasConflicts: boolean, hasDiff
 	return body
 }
 
+/**
+ * Errors come from git and GitHub, keep the bot's paths and any token out
+ * of the public comment.
+ */
+export const redactError = (error: string): string => {
+	return error
+		.replaceAll(ROOT_DIR, '…')
+		.replace(/x-access-token:[^@\s]+@/g, 'x-access-token:***@')
+		.replace(/\bgh[a-z]_[A-Za-z0-9]+/g, '***')
+}
+
 export const getFailureCommentBody = (task: Task, target: string, error: string = 'Unknown error') => {
 	const { branch, commits } = task
 
@@ -114,7 +125,7 @@ git cherry-pick ${commits.map(commit => commit.slice(0, 8)).join(' ')}
 git push origin ${target}
 \`\`\`
 
-Error: ${error}
+Error: ${redactError(error)}
 
 ${LEARN_MORE}`
 }
