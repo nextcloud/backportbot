@@ -7,7 +7,7 @@ import { addToQueue } from './queue.js'
 import { ALLOWED_ORGS, CACHE_DIRNAME, COMMAND_PREFIX, LABEL_BACKPORT, PRIVATE_KEY_PATH, ROOT_DIR, SERVE_HOST, SERVE_PORT, TO_SEPARATOR, Task, WEBHOOK_SECRET, WORK_DIRNAME } from './constants.js'
 import { extractBranchFromPayload, extractCommitsFromPayload, isFriendly } from './payloadUtils.js'
 import { getApp } from './appUtils.js'
-import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, isAllowedBackportAuthorAssociation, removePRLabel } from './githubUtils.js'
+import { Reaction, addPRLabel, addReaction, getAuthToken, getBackportRequestsFromPR, getCommitsForPR, isAllowedBackportAuthorAssociation, isAllowedForcedBackportAuthorAssociation, removePRLabel } from './githubUtils.js'
 import { setGlobalGitConfig } from './gitUtils.js'
 
 const app = getApp()
@@ -164,6 +164,11 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 		let commits: string[]
 
 		const isForcedRequest = body.trim().startsWith(COMMAND_PREFIX + '!')
+		if (isForcedRequest && !isAllowedForcedBackportAuthorAssociation(authorAssociation)) {
+			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.THUMBS_DOWN).catch(e => warn(`Failed to add reaction to comment: ${e.message}`))
+			info(`Ignoring forced backport request from ${commentAuthor} without write access`)
+			return
+		}
 		const isFullRequest = body.trim().startsWith(isForcedRequest ? COMMAND_PREFIX + '!' + TO_SEPARATOR : COMMAND_PREFIX + TO_SEPARATOR)
 		const isClosed = payload.issue?.state === 'closed'
 		const isMerged = typeof payload.issue?.pull_request?.merged_at === 'string'

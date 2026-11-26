@@ -21,6 +21,19 @@ export const isAllowedBackportAuthorAssociation = (authorAssociation?: string): 
 		BACKPORT_REQUEST_ASSOCIATIONS.has(authorAssociation)
 }
 
+// Forced requests backport pull requests that are not merged yet,
+// so they need write access to the repository.
+const FORCED_BACKPORT_REQUEST_ASSOCIATIONS = new Set([
+	'OWNER',
+	'MEMBER',
+	'COLLABORATOR',
+])
+
+export const isAllowedForcedBackportAuthorAssociation = (authorAssociation?: string): boolean => {
+	return authorAssociation !== undefined &&
+		FORCED_BACKPORT_REQUEST_ASSOCIATIONS.has(authorAssociation)
+}
+
 export enum Reaction {
 	THUMBS_UP = '+1',
 	THUMBS_DOWN = '-1',
@@ -236,9 +249,7 @@ export const getBackportRequestsFromPR = async (octokit: Octokit, task: Task): P
 		.filter(comment => comment?.body?.trim().startsWith(COMMAND_PREFIX))
 		// Filter out forced requests
 		.filter(comment => !comment?.body?.trim().startsWith(COMMAND_PREFIX + '!'))
-		// Filter out comments from users not authorized to request backports
-		.filter(comment => isAllowedBackportAuthorAssociation(comment?.author_association))
-		// Filter out comments that got rejected by the bot.
-		// This is a safety measure, we will check the command again
-		.filter(comment => comment.reactions?.confused === 0) as IssueComment[]
+		// Filter out comments from users not authorized to request backports.
+		// Reactions are not looked at: anyone can add one to any comment.
+		.filter(comment => isAllowedBackportAuthorAssociation(comment?.author_association)) as IssueComment[]
 }
