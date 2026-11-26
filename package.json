@@ -30,23 +30,23 @@
   },
   "homepage": "https://github.com/skjnldsv/backportbot#readme",
   "dependencies": {
-    "@octokit/app": "^16.1.2",
+    "@octokit/app": "^16.1.4",
     "@octokit/rest": "^22.0.1",
     "@octokit/webhooks": "^14.2.0",
     "@octokit/webhooks-types": "^7.6.1",
-    "p-queue": "^9.1.0",
-    "simple-git": "^3.29.0",
-    "tsx": "^4.20.6"
+    "p-queue": "^10.0.0",
+    "simple-git": "^4.1.0",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
-    "@tsconfig/recommended": "^1.0.11",
-    "@types/node": "^25.5.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^6.21.0",
-    "@vitest/coverage-istanbul": "^2.1.8",
-    "eslint": "^8.57.1",
-    "typescript": "^5.9.3",
-    "vitest": "^2.0.5"
+    "@eslint/js": "^10.0.1",
+    "@tsconfig/recommended": "^1.0.14",
+    "@types/node": "^24.19.4",
+    "@vitest/coverage-istanbul": "^5.1.2",
+    "eslint": "^10.15.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.74.0",
+    "vitest": "^5.1.2"
   },
   "engines": {
     "node": "^24.0.0",
