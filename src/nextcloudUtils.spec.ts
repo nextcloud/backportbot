@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { Milestone } from '@octokit/webhooks-types'
-import { getBackportBody, getFailureCommentBody, getLabelsForPR, getMilestoneFromBase } from './nextcloudUtils'
-import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
+import { getBackportBody, getFailureCommentBody, getLabelsForPR, getMilestoneFromBase, redactError } from './nextcloudUtils'
+import { LABEL_BACKPORT, LABEL_TO_REVIEW, LEARN_MORE, ROOT_DIR, STEP_AMEND_SKIP_CI, STEP_REMOVE_EMPTY_COMMITS, STEP_REVIEW_CHANGES, STEP_REVIEW_CONFLICTS, Task, WARN_CONFLICTS, WARN_DIFF } from './constants'
 
 describe('Match branch branch to milestone', () => {
 	const branches = [
@@ -196,5 +196,21 @@ describe('Generates correct failure comment body', () => {
 	test('Contains learn more link', () => {
 		const body = getFailureCommentBody(task, 'backport/stable28/pr-42')
 		expect(body).toContain(LEARN_MORE)
+	})
+})
+
+describe('Failure comments stay free of internals', () => {
+	test.each([
+		[`fatal: could not create work tree dir '${ROOT_DIR}/work/0a1b2c'`, `fatal: could not create work tree dir '…/work/0a1b2c'`],
+		['unable to access https://x-access-token:ghs_abc123@github.com/nextcloud/server.git', 'unable to access https://x-access-token:***@github.com/nextcloud/server.git'],
+		['bad credentials ghs_abc123DEF', 'bad credentials ***'],
+		['No changes found in backport branch', 'No changes found in backport branch'],
+	])('%s', (error, expected) => {
+		expect(redactError(error)).toBe(expected)
+	})
+
+	test('the posted comment is redacted', () => {
+		const body = getFailureCommentBody({ branch: 'stable33', commits: ['abcdef12'] } as Task, 'backport/1/stable33', `failed in ${ROOT_DIR}/work/x`)
+		expect(body).not.toContain(ROOT_DIR)
 	})
 })

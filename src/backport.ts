@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs'
 import { Octokit } from '@octokit/rest'
 
-import { cherryPickCommits, cloneAndCacheRepo, getCommitTitle, hasDiff, hasEmptyCommits, hasSkipCiCommits, pushBranch } from './gitUtils.js'
+import { cherryPickCommits, cloneAndCacheRepo, countCommitsSince, getCommitTitle, hasDiff, hasEmptyCommits, hasSkipCiCommits, pushBranch } from './gitUtils.js'
 import { CherryPickResult, Task } from './constants.js'
 import { debug, error, info, warn } from './logUtils.js'
 import { Reaction, addReaction, getAuthToken, getAvailableLabels, getLabelsFromPR, getAvailableMilestones, requestReviewers, getReviewers, createBackportPullRequest, setPRLabels, setPRMilestone, getChangesFromPR, updatePRBody, commentOnPR, assignToPR, getOpenPullRequestForBranch } from './githubUtils.js'
@@ -142,8 +142,10 @@ export async function backport(task: Task): Promise<void> {
 			const diffChanges = oldChanges.additions !== newChanges.additions
 				|| oldChanges.deletions !== newChanges.deletions
 				|| oldChanges.changedFiles !== newChanges.changedFiles
-			const skipCi = await hasSkipCiCommits(tmpDir, task.commits.length)
-			const emptyCommits = await hasEmptyCommits(tmpDir, task.commits.length, task)
+			// Commits that could not be cherry picked at all were skipped
+			const appliedCommits = await countCommitsSince(tmpDir, `origin/${task.branch}`)
+			const skipCi = await hasSkipCiCommits(tmpDir, appliedCommits)
+			const emptyCommits = await hasEmptyCommits(tmpDir, appliedCommits, task)
 			const hasConflicts = conflicts === CherryPickResult.CONFLICTS
 
 			debug(task, `hasConflicts: ${hasConflicts}, diffChanges: ${diffChanges}, emptyCommits: ${emptyCommits}, skipCi: ${skipCi}`)

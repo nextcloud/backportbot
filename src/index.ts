@@ -287,7 +287,6 @@ Subscribed events: ${data.events}`)
 	// Set the global git config
 	await setGlobalGitConfig(data.name)
 
-	const obfuscatedWebhookSecret = WEBHOOK_SECRET.slice(0, 8) + '*'.repeat(WEBHOOK_SECRET.length - 8)
 	info(`Listening on ${SERVE_HOST}:${SERVE_PORT}`)
 	info(`├ Authenticated as ${data.name}`)
 	info(`├ Monitoring events ${data.events.join(', ')}`)
@@ -299,7 +298,7 @@ Subscribed events: ${data.events}`)
 	info(`├──────────────────────────────`)
 	info(`├ Allowed orgs: ${ALLOWED_ORGS.join(', ')}`)
 	info(`├ Private key in ${PRIVATE_KEY_PATH}`)
-	info(`└ Webhook secret is ${obfuscatedWebhookSecret}`)
+	info(`└ Webhook secret is ${WEBHOOK_SECRET.length} characters long`)
 
 	// Create server
 	const middleware = createNodeMiddleware(app.webhooks)
@@ -311,6 +310,10 @@ Subscribed events: ${data.events}`)
 		if (req.url === '/health') {
 			res.writeHead(200, { 'Content-Type': 'text/plain' })
 			res.end('OK')
-		} 
+			return
+		}
+
+		res.writeHead(404)
+		res.end()
 	}).listen(SERVE_PORT, SERVE_HOST)
 })

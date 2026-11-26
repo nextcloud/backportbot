@@ -5,7 +5,7 @@ import { simpleGit } from 'simple-git'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { CherryPickResult, Task } from './constants'
-import { authConfig, cherryPickCommits, pushBranch } from './gitUtils'
+import { authConfig, cherryPickCommits, countCommitsSince, hasSkipCiCommits, pushBranch } from './gitUtils'
 
 vi.mock('./logUtils', () => ({ debug: vi.fn(), error: vi.fn(), info: vi.fn() }))
 
@@ -99,5 +99,38 @@ describe('installation token', () => {
 		expect((await simpleGit(remote).branchLocal()).all).toContain('backport/1/stable33')
 		expect((await repo.raw(['config', '--list', '--show-origin']))).not.toContain('ghs_secret')
 		expect((await repo.remote(['get-url', 'origin']))?.trim()).toBe(remote)
+	})
+})
+
+describe('commits added by a backport', () => {
+	let repoRoot: string
+
+	beforeEach(() => {
+		repoRoot = mkdtempSync(join(tmpdir(), 'backportbot-test-'))
+	})
+
+	afterEach(() => {
+		rmSync(repoRoot, { recursive: true, force: true })
+	})
+
+	test('only the applied ones are checked, not the target branch history', async () => {
+		const git = simpleGit(repoRoot)
+		await git.init()
+		await git.addConfig('user.name', 'Test')
+		await git.addConfig('user.email', 'test@example.com')
+		await git.addConfig('commit.gpgsign', 'false')
+		await git.commit('init', undefined, { '--allow-empty': null })
+		// The target branch ends with a [skip ci] commit of its own
+		await git.commit('chore: bump version [skip ci]', undefined, { '--allow-empty': null })
+		await git.branch(['base'])
+		// Two commits were requested, one could not be cherry picked
+		writeFileSync(join(repoRoot, 'file.txt'), 'backported\n')
+		await git.add('file.txt')
+		await git.commit('fix: the backported change')
+
+		const applied = await countCommitsSince(repoRoot, 'base')
+
+		expect(applied).toBe(1)
+		expect(await hasSkipCiCommits(repoRoot, applied)).toBe(false)
 	})
 })
