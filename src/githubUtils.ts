@@ -105,6 +105,17 @@ export const createBackportPullRequest = async (octokit: Octokit, task: Task, he
 	})
 }
 
+export const getOpenPullRequestForBranch = async (octokit: Octokit, task: Task, head: string): Promise<{ number: number, html_url: string } | null> => {
+	const { owner, repo } = task
+	const { data } = await octokit.rest.pulls.list({
+		owner,
+		repo,
+		head: `${owner}:${head}`,
+		state: 'open',
+	})
+	return data[0] ?? null
+}
+
 export const updatePRBody = async (octokit: Octokit, task: Task, prNumber: number, body: string) => {
 	const { owner, repo } = task
 	return octokit.rest.pulls.update({

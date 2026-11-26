@@ -118,3 +118,7 @@ Error: ${error}
 
 ${LEARN_MORE}`
 }
+
+export const getAlreadyOpenCommentBody = (branch: string, prNumber: number) => {
+	return `The backport to \`${branch}\` is already open in #${prNumber}, so I left it as it is. Close it first if you want me to start over.`
+}
