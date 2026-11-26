@@ -65,7 +65,7 @@ app.webhooks.on(['pull_request.closed'], async ({ payload }) => {
 			try {
 				commits = extractCommitsFromPayload(body)
 				branch = extractBranchFromPayload(body)
-			} catch (e) {
+			} catch {
 				// Add a confused reaction to the comment to indicate that we failed to understand it (fire-and-forget)
 				addReaction(authOctokit, { owner, repo, commentId: id } as Task, Reaction.CONFUSED).catch(() => {})
 				error(`├ Failed to extract commits and branch from payload: \`${body}\``)
@@ -161,7 +161,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 		}
 
 		let branch: string
-		let commits: string[] = []
+		let commits: string[]
 
 		const isForcedRequest = body.trim().startsWith(COMMAND_PREFIX + '!')
 		const isFullRequest = body.trim().startsWith(isForcedRequest ? COMMAND_PREFIX + '!' + TO_SEPARATOR : COMMAND_PREFIX + TO_SEPARATOR)
@@ -179,7 +179,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 		try {
 			commits = extractCommitsFromPayload(body)
 			branch = extractBranchFromPayload(body)
-		} catch (e) {
+		} catch {
 			// Add a confused reaction to the comment to indicate that we failed to understand it (fire-and-forget)
 			addReaction(authOctokit, { owner, repo, commentId } as Task, Reaction.CONFUSED).catch(() => {})
 			error(`Failed to extract commits and branch from payload: \`${body}\` on ${htmlUrl}`)
@@ -254,7 +254,7 @@ app.webhooks.on(['issue_comment.created'], async ({ payload }) => {
 					} catch (e) {
 						error(`\nFailed to remove backport label from PR ${htmlUrl}: ${e.message}`)
 					}
-				} catch (e) {
+				} catch {
 					// Safely ignore
 				}
 			}
