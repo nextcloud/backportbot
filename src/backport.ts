@@ -4,8 +4,8 @@ import { Octokit } from '@octokit/rest'
 import { cherryPickCommits, cloneAndCacheRepo, getCommitTitle, hasDiff, hasEmptyCommits, hasSkipCiCommits, pushBranch } from './gitUtils.js'
 import { CherryPickResult, Task } from './constants.js'
 import { debug, error, info, warn } from './logUtils.js'
-import { Reaction, addReaction, getAuthToken, getAvailableLabels, getLabelsFromPR, getAvailableMilestones, requestReviewers, getReviewers, createBackportPullRequest, setPRLabels, setPRMilestone, getChangesFromPR, updatePRBody, commentOnPR, assignToPR } from './githubUtils.js'
-import { getBackportBody, getFailureCommentBody, getLabelsForPR, getMilestoneFromBase } from './nextcloudUtils.js'
+import { Reaction, addReaction, getAuthToken, getAvailableLabels, getLabelsFromPR, getAvailableMilestones, requestReviewers, getReviewers, createBackportPullRequest, setPRLabels, setPRMilestone, getChangesFromPR, updatePRBody, commentOnPR, assignToPR, getOpenPullRequestForBranch } from './githubUtils.js'
+import { getAlreadyOpenCommentBody, getBackportBody, getFailureCommentBody, getLabelsForPR, getMilestoneFromBase } from './nextcloudUtils.js'
 
 export async function backport(task: Task): Promise<void> {
 	const token = await getAuthToken(task.installationId)
@@ -18,10 +18,19 @@ export async function backport(task: Task): Promise<void> {
 
 	info(task, `Starting backport request`)
 
-	// Add a reaction to the comment to indicate that we're processing it (fire-and-forget)
-	addReaction(octokit, task, Reaction.THUMBS_UP).catch(err => error(task, `Failed to add reaction to PR: ${err.message}`))
-
 	try {
+		// Never overwrite a backport that is still open, people may have pushed to it
+		const openPullRequest = await getOpenPullRequestForBranch(octokit, task, backportBranch)
+		if (openPullRequest) {
+			info(task, `Backport already open in #${openPullRequest.number}, leaving ${backportBranch} as it is`)
+			addReaction(octokit, task, Reaction.EYES).catch(err => error(task, `Failed to add reaction to PR: ${err.message}`))
+			await commentOnPR(octokit, task, getAlreadyOpenCommentBody(task.branch, openPullRequest.number))
+			return
+		}
+
+		// Add a reaction to the comment to indicate that we're processing it (fire-and-forget)
+		addReaction(octokit, task, Reaction.THUMBS_UP).catch(err => error(task, `Failed to add reaction to PR: ${err.message}`))
+
 		// Clone and cache the repo
 		try {
 			tmpDir = await cloneAndCacheRepo(task, backportBranch, token)
