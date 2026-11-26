@@ -6,6 +6,10 @@ on:
     tags: ['v*.*.*']
   pull_request:
     branches: [master]
+  # Nightly image from master, which also picks up Node and Alpine updates
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -43,7 +47,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # master -> :master, v2.1.0 -> :2.1.0, :2.1 and :latest
+      # master -> :master, v2.1.0 -> :2.1.0, :2.1 and :latest,
+      # schedule -> :nightly and :nightly-YYYYMMDD
       - name: Image metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
@@ -54,6 +59,8 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=schedule,pattern=nightly
+            type=schedule,pattern=nightly-{{date 'YYYYMMDD'}}
 
       # Pull requests only check that the image builds
       - name: Build and push
