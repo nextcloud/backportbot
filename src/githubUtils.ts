@@ -51,12 +51,19 @@ export const getAuthToken = async (installationId: number): Promise<string> => {
 	return token
 }
 
+const MAX_PR_COMMITS = 250
+
 export const getCommitsForPR = async (octokit: Octokit, owner: string, repo: string, pr: number): Promise<string[]> => {
-	const { data: commits } = await octokit.rest.pulls.listCommits({
+	const commits = await octokit.paginate(octokit.rest.pulls.listCommits, {
 		owner,
 		repo,
 		pull_number: pr,
+		per_page: 100,
 	})
+	// GitHub lists at most 250 commits of a pull request
+	if (commits.length >= MAX_PR_COMMITS) {
+		throw new Error(`Pull request has ${MAX_PR_COMMITS} commits or more, GitHub does not list them all`)
+	}
 	return commits
 		// Filter out merge commits
 		.filter(commit => (commit.parents || []).length <= 1)
@@ -75,15 +82,16 @@ export const addReaction = async (octokit: Octokit, task: Task, reaction: Reacti
 
 export const getReviewers = async function (octokit: Octokit, task: Task): Promise<string[]> {
 	const { owner, repo, prNumber } = task
-	const reviews = await octokit.rest.pulls.listReviews({
+	const reviews = await octokit.paginate(octokit.rest.pulls.listReviews, {
 		owner,
 		repo,
-		pull_number: prNumber
+		pull_number: prNumber,
+		per_page: 100,
 	})
 
 	// Filter non collaborators and non approved reviews
 	// Then map to usernames and remove invalid values
-	const reviewers = reviews.data
+	const reviewers = reviews
 		.filter(review => review.state === 'APPROVED')
 		.filter(reviewer => reviewer.author_association !== 'NONE')
 		.map(reviewer => reviewer?.user?.login)
@@ -141,10 +149,11 @@ export const updatePRBody = async (octokit: Octokit, task: Task, prNumber: numbe
 
 export const getAvailableMilestones = async (octokit: Octokit, task: Task): Promise<Milestone[]> => {
 	const { owner, repo } = task
-	const { data } = await octokit.rest.issues.listMilestones({
+	const data = await octokit.paginate(octokit.rest.issues.listMilestones, {
 		owner,
 		repo,
 		state: 'open',
+		per_page: 100,
 	})
 
 	return data as Milestone[]
@@ -152,23 +161,25 @@ export const getAvailableMilestones = async (octokit: Octokit, task: Task): Prom
 
 export const getAvailableLabels = async (octokit: Octokit, task: Task): Promise<string[]> => {
 	const { owner, repo } = task
-	const labels = await octokit.rest.issues.listLabelsForRepo({
+	const labels = await octokit.paginate(octokit.rest.issues.listLabelsForRepo, {
 		owner,
 		repo,
+		per_page: 100,
 	})
 
-	return labels.data.map(label => label.name)
+	return labels.map(label => label.name)
 }
 
 export const getLabelsFromPR = async (octokit: Octokit, task: Task): Promise<string[]> => {
 	const { owner, repo, prNumber } = task
-	const labels = await octokit.rest.issues.listLabelsOnIssue({
+	const labels = await octokit.paginate(octokit.rest.issues.listLabelsOnIssue, {
 		owner,
 		repo,
 		issue_number: prNumber,
+		per_page: 100,
 	})
 
-	return labels.data.map(label => label.name)
+	return labels.map(label => label.name)
 }
 
 export const setPRLabels = async (octokit: Octokit, task: Task, prNumber: number, labels: string[]) => {
@@ -249,10 +260,11 @@ export const commentOnPR = async (octokit: Octokit, task: Task, body: string) =>
 
 export const getBackportRequestsFromPR = async (octokit: Octokit, task: Task): Promise<IssueComment[]> => {
 	const { owner, repo, prNumber } = task
-	const { data } = await octokit.rest.issues.listComments({
+	const data = await octokit.paginate(octokit.rest.issues.listComments, {
 		owner,
 		repo,
 		issue_number: prNumber,
+		per_page: 100,
 	})
 
 	return data
