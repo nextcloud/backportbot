@@ -24,7 +24,7 @@ export async function backport(task: Task): Promise<void> {
 	try {
 		// Clone and cache the repo
 		try {
-			tmpDir = await cloneAndCacheRepo(task, backportBranch)
+			tmpDir = await cloneAndCacheRepo(task, backportBranch, token)
 			info(task, `Cloned to ${tmpDir}`)
 		} catch (e) {
 			throw new Error(`Failed to clone repository: ${e.message}`, { cause: e })

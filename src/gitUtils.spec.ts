@@ -5,7 +5,7 @@ import { simpleGit } from 'simple-git'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { CherryPickResult, Task } from './constants'
-import { cherryPickCommits } from './gitUtils'
+import { authConfig, cherryPickCommits, pushBranch } from './gitUtils'
 
 vi.mock('./logUtils', () => ({ debug: vi.fn(), error: vi.fn(), info: vi.fn() }))
 
@@ -60,5 +60,44 @@ describe('cherryPickCommits', () => {
 		expect(result).toBe(CherryPickResult.CONFLICTS)
 		const amended = await git.raw(['log', '-1', '--format=%B'])
 		expect(amended.trim()).toBe(`${message}\n\n[skip ci]`)
+	})
+})
+
+describe('installation token', () => {
+	let root: string
+
+	beforeEach(() => {
+		root = mkdtempSync(join(tmpdir(), 'backportbot-test-'))
+	})
+
+	afterEach(() => {
+		rmSync(root, { recursive: true, force: true })
+	})
+
+	test('is sent as a header for github.com only', () => {
+		const [config] = authConfig('ghs_secret')
+		expect(config).toMatch(/^http\.https:\/\/github\.com\/\.extraheader=AUTHORIZATION: basic /)
+		const credentials = Buffer.from(config.split('basic ')[1], 'base64').toString()
+		expect(credentials).toBe('x-access-token:ghs_secret')
+	})
+
+	test('is not stored in the repository when pushing', async () => {
+		const remote = join(root, 'remote.git')
+		const local = join(root, 'local')
+		await simpleGit().init(['--bare', remote])
+		const git = simpleGit()
+		await git.clone(remote, local)
+		const repo = simpleGit(local)
+		await repo.addConfig('user.name', 'Test')
+		await repo.addConfig('user.email', 'test@example.com')
+		await repo.addConfig('commit.gpgsign', 'false')
+		await repo.checkout(['-b', 'backport/1/stable33'])
+		await repo.commit('backport', undefined, { '--allow-empty': null })
+
+		await pushBranch({} as Task, local, 'ghs_secret', 'backport/1/stable33')
+
+		expect((await simpleGit(remote).branchLocal()).all).toContain('backport/1/stable33')
+		expect((await repo.raw(['config', '--list', '--show-origin']))).not.toContain('ghs_secret')
+		expect((await repo.remote(['get-url', 'origin']))?.trim()).toBe(remote)
 	})
 })

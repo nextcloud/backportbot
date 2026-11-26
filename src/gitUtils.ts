@@ -6,6 +6,16 @@ import { CACHE_DIRNAME, CherryPickResult, ROOT_DIR, Task, WORK_DIRNAME } from '.
 import { debug, error, info } from './logUtils.js'
 import { randomBytes } from 'node:crypto'
 
+/**
+ * Git config that authenticates one command with the installation token,
+ * without storing it in the repository like a token in the remote URL would.
+ * @param token The installation access token.
+ */
+export const authConfig = (token: string): string[] => {
+	const credentials = Buffer.from(`x-access-token:${token}`).toString('base64')
+	return [`http.https://github.com/.extraheader=AUTHORIZATION: basic ${credentials}`]
+}
+
 export const setGlobalGitConfig = async (user: string): Promise<void> => {
 	const git = simpleGit()
 	await git.addConfig('user.email', `${user}[bot]@users.noreply.github.com`, false, 'global')
@@ -20,10 +30,12 @@ export const setGlobalGitConfig = async (user: string): Promise<void> => {
  * @param repo The name of the repo.
  * @param branch The branch to backport from.
  * @param backportBranch The branch to backport to.
+ * @param token The installation access token, private repositories need it.
  * @returns The path to the temp repo.
  */
-export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Promise<string> => {
+export const cloneAndCacheRepo = async (task: Task, backportBranch: string, token: string): Promise<string> => {
 	const { owner, repo, branch } = task
+	const remoteUrl = `https://github.com/${owner}/${repo}`
 
 	// Clone the repo into the cache dir or make sure it already exists
 	const cachedRepoRoot = join(ROOT_DIR, CACHE_DIRNAME, owner, repo)
@@ -33,13 +45,15 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 			mkdirSync(cachedRepoRoot, { recursive: true })
 		}
 
-		const git = simpleGit(cachedRepoRoot)
+		const git = simpleGit(cachedRepoRoot, { config: authConfig(token) })
 		if (!existsSync(cachedRepoRoot + '/.git')) {
 			// Is not a repository, so clone
-			await git.clone(`https://github.com/${owner}/${repo}`, '.')
+			await git.clone(remoteUrl, '.')
 		} else {
 			// Is already a repository so make sure it is clean and follows the default branch
 			await git.clean(CleanOptions.FORCE + CleanOptions.IGNORED_ONLY + CleanOptions.RECURSIVE)
+			// Older versions pushed with the token in the remote URL, drop it
+			await git.remote(['set-url', 'origin', remoteUrl])
 			debug(task, `Repo already cached at ${cachedRepoRoot}`)
 		}
 	} catch (e) {
@@ -54,7 +68,7 @@ export const cloneAndCacheRepo = async (task: Task, backportBranch: string): Pro
 		mkdirSync(join(ROOT_DIR, WORK_DIRNAME), { recursive: true })
 
 		// create worktree
-		const git = simpleGit(cachedRepoRoot)
+		const git = simpleGit(cachedRepoRoot, { config: authConfig(token) })
 
 		// make sure we are on the default branch
 		const defaultBranch = (await git.raw(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])).split('origin/').pop() || 'master'
@@ -144,8 +158,7 @@ export const cherryPickCommits = async (task: Task, repoRoot: string): Promise<C
 }
 
 export const pushBranch = async (task: Task, repoRoot: string, token: string, backportBranch: string): Promise<void> => {
-	const git = simpleGit(repoRoot)
-	await git.remote(['set-url', 'origin', `https://x-access-token:${token}@github.com/${task.owner}/${task.repo}.git`])
+	const git = simpleGit(repoRoot, { config: authConfig(token) })
 	await git.raw(['push', 'origin', '--force', backportBranch])
 }
 
