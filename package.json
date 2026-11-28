@@ -41,7 +41,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tsconfig/recommended": "^1.0.14",
-    "@types/node": "^24.19.4",
+    "@types/node": "^26.6.7",
     "@vitest/coverage-istanbul": "^5.1.2",
     "eslint": "^10.15.0",
     "typescript": "~6.0.3",
